@@ -120,6 +120,7 @@ test('unary functions apply immediately and show up in the expression', () => {
 test('an error blocks further input until it is cleared', () => {
   const engine = run([...digits('5'), operator('divide'), ...digits('0'), EQUALS]);
   assert.equal(engine.displayText(), 'Cannot divide by zero');
+  assert.equal(engine.expressionText(), '5 ÷ 0');
   assert.equal(engine.getState().isError, true);
 
   press(engine, ...digits('7'), operator('add'));

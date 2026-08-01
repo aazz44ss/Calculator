@@ -88,6 +88,7 @@ const ui = {
   panelTab: storage.get(STORAGE_KEYS.panel) === 'memory' ? 'memory' : 'history',
   panelOpen: false,
   keypadSignature: '',
+  panelSignature: '',
 };
 
 const keyRegistry = new Map();
@@ -148,39 +149,50 @@ function renderToolbar() {
     return;
   }
   elements.toolbar.hidden = false;
-  const fragment = document.createDocumentFragment();
-  for (const key of SCIENTIFIC_TOOLBAR_KEYS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'chip';
-    button.dataset.key = key.id;
-    button.setAttribute('aria-label', key.aria);
-    if (key.id === 'angle-unit') {
+  if (elements.toolbar.childElementCount === 0) {
+    const fragment = document.createDocumentFragment();
+    for (const key of SCIENTIFIC_TOOLBAR_KEYS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chip';
+      button.dataset.key = key.id;
+      button.textContent = key.label;
+      button.setAttribute('aria-label', key.aria);
+      fragment.append(button);
+    }
+    elements.toolbar.replaceChildren(fragment);
+  }
+
+  for (const button of elements.toolbar.querySelectorAll('[data-key]')) {
+    if (button.dataset.key === 'angle-unit') {
       button.textContent = ANGLE_LABELS[engine.angleUnit];
       button.title = `Angle unit: ${ANGLE_LABELS[engine.angleUnit]}`;
-    } else {
-      button.textContent = key.label;
-      const pressed = key.id === 'toggle-hyp' ? engine.hyp : engine.fe;
-      button.setAttribute('aria-pressed', String(pressed));
+      continue;
     }
-    fragment.append(button);
+    const pressed = button.dataset.key === 'toggle-hyp' ? engine.hyp : engine.fe;
+    button.setAttribute('aria-pressed', String(pressed));
   }
-  elements.toolbar.replaceChildren(fragment);
 }
 
 function renderMemoryRow(state) {
-  const fragment = document.createDocumentFragment();
-  for (const key of MEMORY_KEYS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'chip';
-    button.dataset.key = key.id;
-    button.textContent = key.label;
-    button.setAttribute('aria-label', key.aria);
-    if (key.requiresMemory && !state.hasMemory) button.disabled = true;
-    fragment.append(button);
+  if (elements.memoryRow.childElementCount === 0) {
+    const fragment = document.createDocumentFragment();
+    for (const key of MEMORY_KEYS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chip';
+      button.dataset.key = key.id;
+      button.textContent = key.label;
+      button.setAttribute('aria-label', key.aria);
+      fragment.append(button);
+    }
+    elements.memoryRow.replaceChildren(fragment);
   }
-  elements.memoryRow.replaceChildren(fragment);
+
+  for (const button of elements.memoryRow.querySelectorAll('[data-key]')) {
+    const key = MEMORY_KEYS.find((candidate) => candidate.id === button.dataset.key);
+    button.disabled = Boolean(key?.requiresMemory) && !state.hasMemory;
+  }
 }
 
 function displaySizeFor(text) {
@@ -206,7 +218,21 @@ function renderDisplay(state) {
   elements.memoryBadge.hidden = !state.hasMemory;
 }
 
+function panelSignature(state) {
+  return JSON.stringify([
+    ui.panelTab,
+    state.history.map((entry) => [entry.id, entry.expression, entry.result]),
+    state.memory.map((entry) => entry.text),
+  ]);
+}
+
 function renderPanel(state) {
+  // Rebuilding the lists on every key press would throw away their scroll
+  // position while the panel is open.
+  const signature = panelSignature(state);
+  if (signature === ui.panelSignature) return;
+  ui.panelSignature = signature;
+
   const isHistory = ui.panelTab === 'history';
   for (const tab of elements.sidePanel.querySelectorAll('[data-panel-tab]')) {
     tab.setAttribute('aria-selected', String(tab.dataset.panelTab === ui.panelTab));
@@ -392,10 +418,16 @@ function handlePanelAction(element) {
  * Wiring
  * ------------------------------------------------------------------ */
 
-/** Keep focus rings for keyboard users only (detail is 0 for keyboard clicks). */
-function dropPointerFocus(event, element) {
-  if (event.detail > 0) element.blur();
-}
+// Pointer clicks (detail > 0) should not leave a focus ring behind, and they
+// should not leave a button focused where Enter would then re-trigger it.
+document.addEventListener(
+  'click',
+  (event) => {
+    if (event.detail === 0 || !(event.target instanceof Element)) return;
+    event.target.closest('button')?.blur();
+  },
+  true,
+);
 
 document.addEventListener('click', (event) => {
   const target = event.target;
@@ -403,28 +435,24 @@ document.addEventListener('click', (event) => {
 
   const keyElement = target.closest('[data-key]');
   if (keyElement instanceof HTMLElement) {
-    dropPointerFocus(event, keyElement);
     handleKeyElement(keyElement);
     return;
   }
 
   const panelElement = target.closest('[data-panel-action]');
   if (panelElement instanceof HTMLElement) {
-    dropPointerFocus(event, panelElement);
     handlePanelAction(panelElement);
     return;
   }
 
   const modeButton = target.closest('[data-mode-button]');
   if (modeButton instanceof HTMLElement) {
-    dropPointerFocus(event, modeButton);
     dispatch({ type: 'mode', value: modeButton.dataset.modeButton });
     return;
   }
 
   const panelTab = target.closest('[data-panel-tab]');
   if (panelTab instanceof HTMLElement) {
-    dropPointerFocus(event, panelTab);
     setPanelOpen(true, panelTab.dataset.panelTab);
   }
 });
@@ -462,6 +490,12 @@ elements.installHintDismiss.addEventListener('click', () => {
 window.addEventListener('keydown', (event) => {
   const target = event.target;
   if (target instanceof HTMLElement && target.isContentEditable) return;
+
+  // Let a focused control handle its own activation keys.
+  const active = document.activeElement;
+  const activatesFocus = event.key === 'Enter' || event.key === ' ';
+  if (activatesFocus && active instanceof HTMLElement && active.tagName === 'BUTTON') return;
+
   const match = findActionForKeyboardEvent(event, engine.mode);
   if (!match) return;
   event.preventDefault();

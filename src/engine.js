@@ -204,12 +204,19 @@ export class CalculatorEngine {
   }
 
   expressionText() {
-    if (this.error && this.settledExpression) return this.settledExpression;
-    if (this.settledExpression) return this.settledExpression;
+    if (this.settledExpression !== null) return this.settledExpression;
     const parts = [];
     for (const frame of this.parenStack) parts.push(...frame.tokens, '(');
     parts.push(...this.tokens);
     if (this.operandExpression !== null) parts.push(this.operandExpression);
+    return formatExpression(parts);
+  }
+
+  /** The expression including the operand on screen, used to report errors. */
+  pendingExpressionText() {
+    const parts = [];
+    for (const frame of this.parenStack) parts.push(...frame.tokens, '(');
+    parts.push(...this.tokens, this.currentOperandToken());
     return formatExpression(parts);
   }
 
@@ -502,6 +509,9 @@ export class CalculatorEngine {
   }
 
   runGuarded(work) {
+    // Captured up front: the failing operand is still on screen here, and it is
+    // what the user needs to see next to the error message.
+    const attempted = this.pendingExpressionText();
     try {
       work();
     } catch (error) {
@@ -515,6 +525,7 @@ export class CalculatorEngine {
         this.tokens = [];
         this.parenStack = [];
         this.value = Decimal.ZERO;
+        this.settledExpression = attempted;
         return;
       }
       throw error;
@@ -816,5 +827,3 @@ export class CalculatorEngine {
     return this;
   }
 }
-
-export { ANGLE_UNITS };
