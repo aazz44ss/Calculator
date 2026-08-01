@@ -19,12 +19,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # `enablement` turns Pages on for the repository if it is still off.
-      - uses: actions/configure-pages@v5
+      # It cannot succeed while the repository is private on a plan without
+      # Pages, so the next step explains that instead of leaving a bare 403.
+      - id: configure
+        continue-on-error: true
+        uses: actions/configure-pages@v6
         with:
           enablement: true
+
+      - name: Explain a failed Pages setup
+        if: steps.configure.outcome == 'failure'
+        run: |
+          echo "::error::GitHub Pages could not be enabled for this repository."
+          echo "::error::Pages needs a public repository, or a paid plan for a private one."
+          echo "::error::Make the repository public (Settings -> General -> Change visibility), then re-run this workflow."
+          exit 1
 
       - name: Assemble the site
         run: |
@@ -32,7 +44,7 @@ jobs:
           cp index.html manifest.webmanifest sw.js .nojekyll _site/
           cp -r styles src icons _site/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -44,4 +56,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
