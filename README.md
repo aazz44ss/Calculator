@@ -32,9 +32,16 @@ The dev server prints a LAN URL and a QR code so you can open it on a phone.
 
 ### Publishing on GitHub Pages
 
-The app is a static site, so Pages can serve it straight from a branch:
+The app is a static site, so the simplest route needs no workflow at all:
 **Settings → Pages → Source: "Deploy from a branch" → Branch: `main`, folder
-`/ (root)`**. It then lives at `https://<user>.github.io/<repo>/`.
+`/ (root)` → Save**. It then lives at `https://<user>.github.io/<repo>/`.
+
+If you would rather deploy from Actions, set the source to "GitHub Actions"
+instead and run the *Deploy to GitHub Pages* workflow, which publishes only the
+app shell. That first setup click cannot be automated: creating a Pages site
+through the API also requires repository administration rights, and the Actions
+`GITHUB_TOKEN` never has them, so the workflow is manual (`workflow_dispatch`)
+and says so when the site is missing.
 
 Every path in the app is relative, so being served from a subdirectory needs no
 changes: the service worker registers with the `/<repo>/` scope, the manifest's
