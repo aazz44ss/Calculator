@@ -1,5 +1,7 @@
 # Calculator
 
+**Live: https://aazz44ss.github.io/Calculator/**
+
 A Windows 11 style calculator as a web app: plain HTML, CSS and ES modules, no
 framework and no build step. It installs to the iOS home screen and keeps
 working offline.
