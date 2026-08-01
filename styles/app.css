@@ -211,7 +211,8 @@ body {
 
 .display {
   flex: 1 1 auto;
-  min-height: 4.5rem;
+  /* Tall enough for the badge row, the expression and the largest value. */
+  min-height: 6.25rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -255,12 +256,14 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
-  min-height: 1rem;
+  min-height: 1.15rem;
   align-self: flex-start;
+  order: -1;
 }
 
 .badge {
   font-size: 0.72rem;
+  line-height: 1.3;
   color: var(--text-secondary);
   background: var(--surface-muted);
   border: 1px solid var(--key-border);
@@ -571,6 +574,10 @@ body {
 
 .panel-item-button {
   appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   border: none;
   background: transparent;
   color: inherit;
@@ -578,6 +585,10 @@ body {
   text-align: right;
   padding: 0;
   cursor: pointer;
+}
+
+.panel-item-button > * {
+  max-width: 100%;
 }
 
 .panel-item-expression {

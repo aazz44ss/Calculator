@@ -66,7 +66,7 @@ export const MEMORY_KEYS = [
   },
   {
     id: 'memory-open',
-    label: 'M˅',
+    label: 'M▾',
     aria: 'Open memory list',
     action: { type: 'ui-open-memory' },
     variant: 'memory',

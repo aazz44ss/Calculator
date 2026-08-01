@@ -3,10 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Calculator</title>
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Windows 11 style calculator that installs to your home screen." />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f3f3f3" media="(prefers-color-scheme: light)" />
@@ -89,12 +86,12 @@
         </div>
 
         <section class="display" id="display-area" aria-label="Display">
-          <div class="display-expression" id="expression" data-testid="expression"></div>
-          <output class="display-value" id="display" aria-live="polite">0</output>
           <div class="display-badges">
             <span class="badge" id="paren-badge" hidden></span>
             <span class="badge" id="memory-badge" hidden>M</span>
           </div>
+          <div class="display-expression" id="expression" data-testid="expression"></div>
+          <output class="display-value" id="display" aria-live="polite">0</output>
         </section>
 
         <div class="toolbar" id="toolbar" hidden></div>

@@ -392,30 +392,39 @@ function handlePanelAction(element) {
  * Wiring
  * ------------------------------------------------------------------ */
 
+/** Keep focus rings for keyboard users only (detail is 0 for keyboard clicks). */
+function dropPointerFocus(event, element) {
+  if (event.detail > 0) element.blur();
+}
+
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
 
   const keyElement = target.closest('[data-key]');
   if (keyElement instanceof HTMLElement) {
+    dropPointerFocus(event, keyElement);
     handleKeyElement(keyElement);
     return;
   }
 
   const panelElement = target.closest('[data-panel-action]');
   if (panelElement instanceof HTMLElement) {
+    dropPointerFocus(event, panelElement);
     handlePanelAction(panelElement);
     return;
   }
 
   const modeButton = target.closest('[data-mode-button]');
   if (modeButton instanceof HTMLElement) {
+    dropPointerFocus(event, modeButton);
     dispatch({ type: 'mode', value: modeButton.dataset.modeButton });
     return;
   }
 
   const panelTab = target.closest('[data-panel-tab]');
   if (panelTab instanceof HTMLElement) {
+    dropPointerFocus(event, panelTab);
     setPanelOpen(true, panelTab.dataset.panelTab);
   }
 });
@@ -483,8 +492,8 @@ function setupInstallHint() {
     return;
   }
   elements.installHintText.textContent = isIos()
-    ? 'Install: tap Share, then "Add to Home Screen".'
-    : 'Install: use your browser menu to add this to your home screen.';
+    ? 'Add to Home Screen from the Share menu.'
+    : 'Install from your browser menu.';
   elements.installHint.hidden = false;
 }
 
