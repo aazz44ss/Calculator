@@ -28,6 +28,21 @@ The dev server prints a LAN URL and a QR code so you can open it on a phone.
 > Screen" install. Use `http://localhost:4173` on the machine itself, or put an
 > https tunnel in front of the server when testing on a device.
 
+### Publishing on GitHub Pages
+
+The app is a static site, so Pages can serve it straight from a branch:
+**Settings → Pages → Source: "Deploy from a branch" → Branch: `main`, folder
+`/ (root)`**. It then lives at `https://<user>.github.io/<repo>/`.
+
+Every path in the app is relative, so being served from a subdirectory needs no
+changes: the service worker registers with the `/<repo>/` scope, the manifest's
+`start_url` and `scope` resolve to the same folder, and the icons sit next to
+them. Pages serves over https, which is a secure origin, so offline mode and
+"Add to Home Screen" both work there — unlike a plain `http://` LAN address.
+
+GitHub Pages needs a public repository unless the account has a paid plan.
+`.nojekyll` is committed so the files are published untouched.
+
 ### Install on iOS
 
 Open the site in Safari, tap **Share → Add to Home Screen**. The app then runs
