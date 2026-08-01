@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="system" data-mode="standard">
+  <head>
+    <meta charset="utf-8" />
+    <title>Calculator</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="description" content="Windows 11 style calculator that installs to your home screen." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3f3f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#202020" media="(prefers-color-scheme: dark)" />
+
+    <!-- iOS home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Calculator" />
+    <!-- Safari prefers this link over the manifest icons, so it has to exist. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/app.css" />
+    <script>
+      // Applied before first paint so the shell never flashes the wrong theme.
+      try {
+        const stored = localStorage.getItem('calculator:theme');
+        if (stored === 'light' || stored === 'dark' || stored === 'system') {
+          document.documentElement.dataset.theme = stored;
+        }
+      } catch {
+        /* storage disabled */
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <div class="calculator" id="calculator">
+        <header class="titlebar">
+          <div class="titlebar-group">
+            <button
+              type="button"
+              class="icon-button"
+              id="mode-menu-button"
+              aria-label="Switch calculator mode"
+              aria-expanded="false"
+            >
+              <span aria-hidden="true">☰</span>
+            </button>
+            <h1 class="titlebar-title" id="mode-title">Standard</h1>
+          </div>
+          <div class="titlebar-group">
+            <button type="button" class="icon-button" id="theme-button" aria-label="Theme: system">
+              <span aria-hidden="true" id="theme-icon">◐</span>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              id="history-button"
+              aria-label="History and memory"
+              aria-expanded="false"
+            >
+              <span aria-hidden="true">🕘</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="mode-switch" id="mode-switch" role="tablist" aria-label="Calculator mode">
+          <button
+            type="button"
+            role="tab"
+            class="mode-tab"
+            data-mode-button="standard"
+            aria-selected="true"
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="mode-tab"
+            data-mode-button="scientific"
+            aria-selected="false"
+          >
+            Scientific
+          </button>
+        </div>
+
+        <section class="display" id="display-area" aria-label="Display">
+          <div class="display-expression" id="expression" data-testid="expression"></div>
+          <output class="display-value" id="display" aria-live="polite">0</output>
+          <div class="display-badges">
+            <span class="badge" id="paren-badge" hidden></span>
+            <span class="badge" id="memory-badge" hidden>M</span>
+          </div>
+        </section>
+
+        <div class="toolbar" id="toolbar" hidden></div>
+        <div class="memory-row" id="memory-row"></div>
+
+        <div class="keypad-area">
+          <div class="keypad" id="keypad" role="group" aria-label="Keypad"></div>
+        </div>
+
+        <p class="install-hint" id="install-hint" hidden>
+          <span class="install-hint-text" id="install-hint-text"></span>
+          <button type="button" class="install-hint-dismiss" id="install-hint-dismiss">
+            Got it
+          </button>
+        </p>
+      </div>
+
+      <aside class="side-panel" id="side-panel" data-open="false" aria-label="History and memory">
+        <div class="panel-tabs" role="tablist" aria-label="Panel">
+          <button
+            type="button"
+            role="tab"
+            class="panel-tab"
+            data-panel-tab="history"
+            aria-selected="true"
+          >
+            History
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="panel-tab"
+            data-panel-tab="memory"
+            aria-selected="false"
+          >
+            Memory
+          </button>
+          <button
+            type="button"
+            class="icon-button panel-close"
+            id="panel-close"
+            aria-label="Close panel"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <div class="panel-body">
+          <ul class="panel-list" id="panel-history" data-panel="history"></ul>
+          <ul class="panel-list" id="panel-memory" data-panel="memory" hidden></ul>
+          <p class="panel-empty" id="panel-empty">There's no history yet.</p>
+        </div>
+        <div class="panel-footer">
+          <button type="button" class="icon-button" id="panel-clear" aria-label="Clear list">
+            <span aria-hidden="true">🗑</span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="panel-backdrop" id="panel-backdrop" hidden></div>
+    </div>
+
+    <noscript>
+      <p class="noscript">This calculator needs JavaScript enabled.</p>
+    </noscript>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,669 @@
+/* Windows 11 (Fluent) flavoured calculator shell. */
+
+:root {
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+    "Helvetica Neue", "Noto Sans TC", "PingFang TC", sans-serif;
+  --radius-key: 4px;
+  --radius-surface: 8px;
+  --key-gap: clamp(3px, 1vw, 6px);
+  --pane-padding: clamp(8px, 2.4vw, 16px);
+  --display-size: clamp(2rem, 10vw, 3rem);
+  --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  --bg: #f3f3f3;
+  --bg-accent: #eaeaea;
+  --surface: #ffffff;
+  --surface-muted: #f7f7f7;
+  --text: #1a1a1a;
+  --text-secondary: #5b5b5b;
+  --key-digit-bg: #fdfdfd;
+  --key-digit-hover: #f2f2f2;
+  --key-digit-active: #e9e9e9;
+  --key-fn-bg: #f6f6f6;
+  --key-fn-hover: #ebebeb;
+  --key-fn-active: #e2e2e2;
+  --key-border: rgba(0, 0, 0, 0.06);
+  --key-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  --accent: #005fb8;
+  --accent-hover: #1a6fc0;
+  --accent-active: #2a7bc8;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(0, 95, 184, 0.14);
+  --divider: rgba(0, 0, 0, 0.08);
+  --danger: #c42b1c;
+}
+
+html[data-theme="dark"] {
+  --bg: #202020;
+  --bg-accent: #272727;
+  --surface: #2b2b2b;
+  --surface-muted: #323232;
+  --text: #ffffff;
+  --text-secondary: #c8c8c8;
+  --key-digit-bg: #3b3b3b;
+  --key-digit-hover: #454545;
+  --key-digit-active: #333333;
+  --key-fn-bg: #323232;
+  --key-fn-hover: #3c3c3c;
+  --key-fn-active: #2c2c2c;
+  --key-border: rgba(255, 255, 255, 0.06);
+  --key-shadow: none;
+  --accent: #4cc2ff;
+  --accent-hover: #5ec9ff;
+  --accent-active: #42b1e8;
+  --accent-text: #000000;
+  --accent-soft: rgba(76, 194, 255, 0.2);
+  --divider: rgba(255, 255, 255, 0.08);
+  --danger: #ff99a4;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] {
+    --bg: #202020;
+    --bg-accent: #272727;
+    --surface: #2b2b2b;
+    --surface-muted: #323232;
+    --text: #ffffff;
+    --text-secondary: #c8c8c8;
+    --key-digit-bg: #3b3b3b;
+    --key-digit-hover: #454545;
+    --key-digit-active: #333333;
+    --key-fn-bg: #323232;
+    --key-fn-hover: #3c3c3c;
+    --key-fn-active: #2c2c2c;
+    --key-border: rgba(255, 255, 255, 0.06);
+    --key-shadow: none;
+    --accent: #4cc2ff;
+    --accent-hover: #5ec9ff;
+    --accent-active: #42b1e8;
+    --accent-text: #000000;
+    --accent-soft: rgba(76, 194, 255, 0.2);
+    --divider: rgba(255, 255, 255, 0.08);
+    --danger: #ff99a4;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.calculator {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--pane-padding);
+  gap: clamp(4px, 1.2vw, 10px);
+}
+
+/* ------------------------------------------------------------------ *
+ * Title bar and mode switch
+ * ------------------------------------------------------------------ */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.titlebar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.titlebar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-button {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-key);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.icon-button:hover {
+  background: var(--key-fn-hover);
+}
+
+.icon-button:active {
+  background: var(--key-fn-active);
+}
+
+.mode-switch {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.mode-tab {
+  appearance: none;
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-key);
+  background: var(--key-fn-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.mode-tab[aria-selected="true"] {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ *
+ * Display: takes whatever vertical space the keypad does not need
+ * ------------------------------------------------------------------ */
+
+.display {
+  flex: 1 1 auto;
+  min-height: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 4px 2px;
+  overflow: hidden;
+}
+
+.display-expression {
+  width: 100%;
+  min-height: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: ltr;
+}
+
+.display-value {
+  width: 100%;
+  font-size: var(--display-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.15;
+}
+
+.display.is-error .display-value {
+  font-size: clamp(1.1rem, 5vw, 1.5rem);
+  color: var(--danger);
+}
+
+.display-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 1rem;
+  align-self: flex-start;
+}
+
+.badge {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--key-border);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Toolbar (DEG/HYP/F-E) and memory row
+ * ------------------------------------------------------------------ */
+
+.toolbar,
+.memory-row {
+  display: flex;
+  gap: var(--key-gap);
+  flex: 0 0 auto;
+}
+
+.memory-row {
+  justify-content: space-between;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-key);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 4px 10px;
+  min-height: 30px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--key-fn-hover);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.chip:disabled {
+  color: var(--text-secondary);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.memory-row .chip {
+  flex: 1 1 0;
+  padding: 4px 2px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Keypad
+ *
+ * The height is derived from the width (key height ~= key width * 0.95)
+ * instead of filling the available box, so keys never stretch into tall
+ * strips on phones with a lot of vertical room.
+ * ------------------------------------------------------------------ */
+
+.keypad-area {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.keypad {
+  --columns: 4;
+  --rows: 6;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  gap: var(--key-gap);
+  aspect-ratio: var(--columns) / calc(var(--rows) * 0.95);
+  max-height: 100%;
+}
+
+.key {
+  appearance: none;
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-key);
+  background: var(--key-digit-bg);
+  box-shadow: var(--key-shadow);
+  color: var(--text);
+  font-family: inherit;
+  font-size: clamp(0.95rem, 4vw, 1.3rem);
+  font-weight: 400;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: background-color var(--transition-fast), transform 60ms ease-out;
+}
+
+.key:hover {
+  background: var(--key-digit-hover);
+}
+
+.key:active,
+.key.is-pressed {
+  background: var(--key-digit-active);
+  transform: scale(0.97);
+}
+
+.key[data-variant="function"],
+.key[data-variant="operator"],
+.key[data-variant="toggle"] {
+  background: var(--key-fn-bg);
+  font-size: clamp(0.8rem, 3.4vw, 1.05rem);
+}
+
+.key[data-variant="function"]:hover,
+.key[data-variant="operator"]:hover,
+.key[data-variant="toggle"]:hover {
+  background: var(--key-fn-hover);
+}
+
+.key[data-variant="function"]:active,
+.key[data-variant="operator"]:active,
+.key[data-variant="toggle"]:active,
+.key[data-variant="function"].is-pressed,
+.key[data-variant="operator"].is-pressed,
+.key[data-variant="toggle"].is-pressed {
+  background: var(--key-fn-active);
+}
+
+.key[data-variant="toggle"][aria-pressed="true"] {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.key[data-variant="equals"] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.key[data-variant="equals"]:hover {
+  background: var(--accent-hover);
+}
+
+.key[data-variant="equals"]:active,
+.key[data-variant="equals"].is-pressed {
+  background: var(--accent-active);
+}
+
+.key:focus-visible,
+.chip:focus-visible,
+.icon-button:focus-visible,
+.mode-tab:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ *
+ * iOS install hint
+ *
+ * Stays in the layout flow on purpose: an absolutely positioned banner
+ * would sit on top of the equals key and swallow taps.
+ * ------------------------------------------------------------------ */
+
+.install-hint {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-surface);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.install-hint[hidden] {
+  display: none;
+}
+
+.install-hint-dismiss {
+  appearance: none;
+  flex: 0 0 auto;
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-key);
+  background: var(--key-fn-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ------------------------------------------------------------------ *
+ * History / memory panel: bottom drawer on phones, side rail on wide
+ * ------------------------------------------------------------------ */
+
+.side-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  max-height: min(70dvh, 520px);
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+  transform: translateY(101%);
+  visibility: hidden;
+  transition: transform var(--transition-fast), visibility var(--transition-fast);
+}
+
+.side-panel[data-open="true"] {
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.panel-backdrop[hidden] {
+  display: none;
+}
+
+.panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.panel-tab {
+  appearance: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel-tab[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.panel-close {
+  margin-left: auto;
+}
+
+.panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel-list[hidden] {
+  display: none;
+}
+
+.panel-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-surface);
+  background: var(--surface-muted);
+}
+
+.panel-item-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  padding: 0;
+  cursor: pointer;
+}
+
+.panel-item-expression {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-item-result {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.panel-item-actions .chip {
+  font-size: 0.7rem;
+  min-height: 26px;
+  padding: 2px 8px;
+}
+
+.panel-empty {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin: 12px 4px;
+}
+
+.panel-empty[hidden] {
+  display: none;
+}
+
+.panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  padding-top: 4px;
+}
+
+.noscript {
+  padding: 16px;
+  font-family: var(--font-ui);
+}
+
+@media (min-width: 720px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr) clamp(260px, 28vw, 340px);
+    gap: 12px;
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+
+  .calculator {
+    max-width: 520px;
+  }
+
+  .side-panel {
+    position: static;
+    z-index: auto;
+    max-height: none;
+    height: 100%;
+    transform: none;
+    visibility: visible;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-surface);
+    box-shadow: none;
+    margin: var(--pane-padding) var(--pane-padding) var(--pane-padding) 0;
+  }
+
+  .panel-close,
+  .panel-backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}

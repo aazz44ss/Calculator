@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Calculator">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0a5cb8"/>
+        <stop offset="1" stop-color="#2f8ddc"/>
+      </linearGradient></defs>
+      <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <g transform="translate(0 0) scale(1)"><rect x="136" y="112" width="240" height="72" rx="14" fill="#ffffff" opacity="0.28"/><rect x="152" y="132" width="120" height="16" rx="8" fill="#ffffff" opacity="0.9"/><rect x="152" y="158" width="72" height="12" rx="6" fill="#ffffff" opacity="0.6"/><rect x="136" y="208" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="220" y="208" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="304" y="208" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="136" y="276" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="220" y="276" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="304" y="276" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="136" y="344" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="220" y="344" width="72" height="56" rx="10" fill="#ffffff" opacity="0.92"/><rect x="304" y="344" width="72" height="56" rx="10" fill="#9ee7ff" opacity="1"/></g>
+</svg>

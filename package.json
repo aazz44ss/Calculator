@@ -1,0 +1,24 @@
+{
+  "name": "windows-11-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Windows 11 style calculator web app with exact decimal arithmetic, installable to the iOS home screen.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "dev": "node scripts/serve.js",
+    "icons": "node scripts/generate-icons.js",
+    "test": "node --test test/decimal.test.js test/engine.test.js",
+    "test:e2e": "node --test --test-concurrency=1 test/browser.test.js",
+    "test:all": "npm test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.35.3"
+  }
+}
