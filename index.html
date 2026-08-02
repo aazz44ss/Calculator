@@ -96,7 +96,15 @@
           </div>
         </header>
 
-        <ol class="tape" id="tape" aria-label="Recent calculations"></ol>
+        <div class="tape-area">
+          <p class="install-hint" id="install-hint" hidden>
+            <span class="install-hint-text" id="install-hint-text"></span>
+            <button type="button" class="install-hint-dismiss" id="install-hint-dismiss">
+              Got it
+            </button>
+          </p>
+          <ol class="tape" id="tape" aria-label="Recent calculations"></ol>
+        </div>
 
         <section class="display" id="display-area" aria-label="Display">
           <div class="display-badges">
@@ -114,13 +122,6 @@
         <div class="keypad-area">
           <div class="keypad" id="keypad" role="group" aria-label="Keypad"></div>
         </div>
-
-        <p class="install-hint" id="install-hint" hidden>
-          <span class="install-hint-text" id="install-hint-text"></span>
-          <button type="button" class="install-hint-dismiss" id="install-hint-dismiss">
-            Got it
-          </button>
-        </p>
       </div>
 
       <aside class="side-panel" id="side-panel" data-open="false" aria-label="History">

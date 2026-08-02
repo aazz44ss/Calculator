@@ -540,6 +540,38 @@ describe('webkit', () => {
     });
   });
 
+  test('the keypad never resizes as history builds up', { timeout: TIMEOUT }, async () => {
+    await withApp(browser, { width: 390, height: 734 }, async (page) => {
+      const measure = async () => {
+        await page.waitForTimeout(200); // let the key press animation settle
+        return page.evaluate(() => {
+          const box = (selector) => {
+            const rect = document.querySelector(selector).getBoundingClientRect();
+            return [Math.round(rect.top), Math.round(rect.height)];
+          };
+          return { keypad: box('#keypad'), key: box('[data-key="digit-5"]') };
+        });
+      };
+
+      for (const mode of ['standard', 'programmer']) {
+        if (mode !== 'standard') await switchMode(page, mode);
+        const empty = await measure();
+
+        await page.keyboard.type('12');
+        assert.deepEqual(await measure(), empty, `typing resized the ${mode} keypad`);
+
+        await page.keyboard.press('Enter'); // also dismisses the install hint
+        assert.deepEqual(await measure(), empty, `the first result resized the ${mode} keypad`);
+
+        for (const sum of ['56+70', '695+238', '99-45', '1+1', '2+2']) {
+          await page.keyboard.type(sum);
+          await page.keyboard.press('Enter');
+        }
+        assert.deepEqual(await measure(), empty, `a full tape resized the ${mode} keypad`);
+      }
+    });
+  });
+
   test('the tape stays visible in a short browser viewport', { timeout: TIMEOUT }, async () => {
     // Safari keeps a URL bar, so the page is far shorter than the screen. The
     // keypad has to give the tape room instead of squeezing it out of sight.

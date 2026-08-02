@@ -240,13 +240,21 @@ body {
  * Tape: the recent calculations, newest closest to the display
  * ------------------------------------------------------------------ */
 
+/* The strip above the display. Its height is reserved whether or not there is
+   anything to show, so neither a first result nor dismissing the install hint
+   can resize the keypad. */
+.tape-area {
+  flex: 1 1 0;
+  min-height: clamp(3rem, 14vh, 7rem);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
 .tape {
-  /* Basis 0 so the tape only ever uses space the keypad does not want. */
   flex: 1 1 0;
   min-height: 0;
-  /* ...except that once there is something to show it always keeps a few
-     lines, even in a browser tab where the URL bar eats the screen. The
-     keypad gives up the difference, see .tape:not(:empty) below. */
   margin: 0;
   padding: 0 2px;
   list-style: none;
@@ -263,13 +271,9 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
 }
 
-.tape:not(:empty) {
-  min-height: clamp(3rem, 14vh, 7rem);
-}
-
-/* Programmer mode also lists the value in four bases, so the tape settles for
+/* Programmer mode also lists the value in four bases, so the strip settles for
    fewer lines there to keep the eight rows of keys usable. */
-html[data-mode="programmer"] .tape:not(:empty) {
+html[data-mode="programmer"] .tape-area {
   min-height: clamp(2.5rem, 10vh, 5rem);
 }
 
@@ -319,9 +323,9 @@ html[data-mode="programmer"] .tape:not(:empty) {
 
 .display {
   flex: 0 0 auto;
-  /* Only as tall as it needs to be: the badge row and the expression line both
-     collapse when empty, and everything they give up goes to the tape. */
-  min-height: 4.5rem;
+  /* A fixed box: the expression line and the badge row come and go as you
+     type, and none of that may move the keypad. */
+  height: 4.75rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -363,7 +367,7 @@ html[data-mode="programmer"] .tape:not(:empty) {
 /* The four base rows already spell the value out, so programmer mode gets a
    smaller headline and spends the height on keys and the tape instead. */
 html[data-mode="programmer"] .display {
-  min-height: 3.25rem;
+  height: 3.5rem;
 }
 
 html[data-mode="programmer"] .display-value {
@@ -644,6 +648,7 @@ html[data-mode="programmer"] .display-value {
 
 .install-hint {
   flex: 0 0 auto;
+  order: -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
