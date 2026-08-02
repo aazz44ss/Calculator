@@ -262,7 +262,7 @@ body {
 }
 
 .tape:not(:empty) {
-  min-height: clamp(3rem, 11vh, 5.5rem);
+  min-height: clamp(3rem, 14vh, 7rem);
 }
 
 /* Programmer mode already lists the value in four bases up there. */
@@ -443,18 +443,13 @@ html[data-mode="programmer"] .tape {
 }
 
 /* ------------------------------------------------------------------ *
- * Toolbar (DEG/HYP/F-E, bit width) and memory row
+ * Toolbar (DEG/HYP/F-E, bit width)
  * ------------------------------------------------------------------ */
 
-.toolbar,
-.memory-row {
+.toolbar {
   display: flex;
   gap: var(--key-gap);
   flex: 0 0 auto;
-}
-
-.memory-row {
-  justify-content: space-between;
 }
 
 .chip {
@@ -485,11 +480,6 @@ html[data-mode="programmer"] .tape {
   color: var(--text-secondary);
   opacity: 0.45;
   cursor: default;
-}
-
-.memory-row .chip {
-  flex: 1 1 0;
-  padding: 4px 2px;
 }
 
 /* ------------------------------------------------------------------ *
@@ -660,7 +650,7 @@ html[data-mode="programmer"] .tape {
 }
 
 /* ------------------------------------------------------------------ *
- * History / memory panel: bottom drawer on phones, side rail on wide
+ * History panel: bottom drawer on phones, side rail on wide screens
  * ------------------------------------------------------------------ */
 
 .side-panel {
@@ -705,22 +695,10 @@ html[data-mode="programmer"] .tape {
   flex: 0 0 auto;
 }
 
-.panel-tab {
-  appearance: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 0.82rem;
+.panel-title {
+  margin: 0;
   padding: 6px 10px;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.panel-tab[aria-selected="true"] {
-  color: var(--text);
-  border-bottom-color: var(--accent);
+  font-size: 0.86rem;
   font-weight: 600;
 }
 
@@ -793,18 +771,6 @@ html[data-mode="programmer"] .tape {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.panel-item-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.panel-item-actions .chip {
-  font-size: 0.7rem;
-  min-height: 26px;
-  padding: 2px 8px;
 }
 
 .panel-empty {

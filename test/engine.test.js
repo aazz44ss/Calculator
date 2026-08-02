@@ -131,16 +131,15 @@ test('an error blocks further input until it is cleared', () => {
   assert.equal(engine.getState().isError, false);
 });
 
-test('CE keeps the pending operator while C keeps memory and history', () => {
+test('CE keeps the pending operator while C keeps the history', () => {
   const engine = run([...digits('5'), operator('add'), ...digits('3'), { type: 'clear-entry' }]);
   assert.equal(engine.displayText(), '0');
   press(engine, ...digits('2'), EQUALS);
   assert.equal(engine.displayText(), '7');
 
-  press(engine, { type: 'memory-store' }, { type: 'clear' });
+  press(engine, { type: 'clear' });
   assert.equal(engine.displayText(), '0');
   assert.equal(engine.expressionText(), '');
-  assert.equal(engine.getState().memory.length, 1);
   assert.equal(engine.getState().history.length, 1);
 });
 
@@ -243,28 +242,6 @@ test('the angle unit drives trigonometry and tan of a quarter turn is invalid', 
   assert.equal(gradians.displayText(), '0');
 });
 
-test('memory keeps a list with per-entry operations', () => {
-  const engine = run([...digits('5'), { type: 'memory-store' }]);
-  assert.deepEqual(engine.getState().memory, [{ index: 0, text: '5' }]);
-  assert.equal(engine.getState().hasMemory, true);
-
-  press(engine, { type: 'clear' }, ...digits('3'), { type: 'memory-add' });
-  assert.equal(engine.getState().memory[0].text, '8');
-
-  press(engine, { type: 'memory-subtract' });
-  assert.equal(engine.getState().memory[0].text, '5');
-
-  press(engine, { type: 'clear' }, { type: 'memory-recall' });
-  assert.equal(engine.displayText(), '5');
-
-  press(engine, ...digits('2'), { type: 'memory-store' });
-  assert.equal(engine.getState().memory.length, 2);
-  press(engine, { type: 'memory-clear', value: 0 });
-  assert.deepEqual(engine.getState().memory, [{ index: 0, text: '5' }]);
-  press(engine, { type: 'memory-clear' });
-  assert.equal(engine.getState().hasMemory, false);
-});
-
 test('history records finished calculations and can recall one', () => {
   const engine = run([...digits('2'), operator('add'), ...digits('3'), EQUALS]);
   press(engine, ...digits('4'), operator('multiply'), ...digits('5'), EQUALS);
@@ -287,7 +264,6 @@ test('state survives a serialise and restore round trip', () => {
   const engine = scientific([
     { type: 'angle-unit', value: 'rad' },
     ...digits('7'),
-    { type: 'memory-store' },
     operator('add'),
     ...digits('1'),
     EQUALS,
@@ -296,7 +272,6 @@ test('state survives a serialise and restore round trip', () => {
   const restored = CalculatorEngine.restore(JSON.parse(JSON.stringify(engine.toJSON())));
   assert.equal(restored.mode, 'scientific');
   assert.equal(restored.angleUnit, 'rad');
-  assert.equal(restored.getState().memory[0].text, '7');
   assert.equal(restored.getState().history[0].expression, '7 + 1 =');
   assert.equal(restored.getState().history[0].result, '8');
   assert.equal(CalculatorEngine.restore(null).mode, 'standard');
@@ -351,15 +326,12 @@ test('keyboard bindings follow the Windows shortcuts', () => {
   assert.deepEqual(lookup({ key: '*' }).action, { type: 'operator', value: 'multiply' });
 });
 
-test('keyboard memory, panel and scientific bindings are separated by modifier and mode', () => {
+test('keyboard panel, mode and scientific bindings are separated by modifier and mode', () => {
   const lookup = (event, mode = 'standard') => findActionForKeyboardEvent(event, mode);
 
-  assert.deepEqual(lookup({ key: 'm', ctrlKey: true }).action, { type: 'memory-store' });
-  assert.deepEqual(lookup({ key: 'p', ctrlKey: true }).action, { type: 'memory-add' });
-  assert.deepEqual(lookup({ key: 'q', ctrlKey: true }).action, { type: 'memory-subtract' });
-  assert.deepEqual(lookup({ key: 'r', ctrlKey: true }).action, { type: 'memory-recall' });
-  assert.deepEqual(lookup({ key: 'l', ctrlKey: true }).action, { type: 'memory-clear' });
   assert.deepEqual(lookup({ key: 'h' }).action, { type: 'ui-toggle-history' });
+  assert.deepEqual(lookup({ key: 'h', ctrlKey: true }).action, { type: 'ui-toggle-history' });
+  assert.deepEqual(lookup({ key: '1', altKey: true }).action, { type: 'mode', value: 'standard' });
   assert.deepEqual(lookup({ key: '2', altKey: true }).action, { type: 'mode', value: 'scientific' });
   assert.deepEqual(lookup({ key: '3', altKey: true }).action, { type: 'mode', value: 'programmer' });
 

@@ -18,9 +18,9 @@ working offline.
   there is no tab strip taking up a row.
 - **A tape of recent calculations** above the display, newest closest to it, so
   the last few results stay in view; tap one to bring it back.
-- **History and memory** — a bottom drawer on phones, a side rail from 720px up.
+- **Full history** — a bottom drawer on phones, a side rail from 720px up.
 - **Themes** — light, dark or follow the system, persisted with the mode,
-  history and memory in `localStorage`.
+  history in `localStorage`.
 - **Keyboard** — the Windows shortcut set, see below.
 
 ## Running it
@@ -130,9 +130,7 @@ while standard mode is active.
 | `R` | 1/x | `Q` | x² |
 | `@` | √ | `F9` | ± |
 | `%` | percent | `!` | n! |
-| `Ctrl+M` | MS | `Ctrl+P` | M+ |
-| `Ctrl+Q` | M− | `Ctrl+R` | MR |
-| `Ctrl+L` | MC | `H` | history panel |
+| `H` | history panel | | |
 | `Alt+1` `Alt+2` `Alt+3` | standard / scientific / programmer | | |
 
 Scientific keypad only:
@@ -159,7 +157,7 @@ RAD in scientific mode and WORD in programmer mode.
 ## Tests
 
 ```bash
-npm test          # 88 unit tests: decimals, formatting, state machine, bases
+npm test          # 87 unit tests: decimals, formatting, state machine, bases
 npm run test:e2e  # 22 WebKit end-to-end tests + 1 Chromium offline test
 ```
 

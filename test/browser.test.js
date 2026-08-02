@@ -305,23 +305,11 @@ describe('webkit', () => {
       await page.keyboard.press('Enter');
       assert.equal(await readDisplay(page), '9');
 
-      await page.keyboard.press('Control+m'); // MS
-      assert.ok(await page.locator('#memory-badge').isVisible());
-      await page.keyboard.press('Escape');
-      await page.keyboard.type('1');
-      await page.keyboard.press('Control+p'); // M+
-      await page.keyboard.press('Escape');
-      await page.keyboard.press('Control+r'); // MR
-      assert.equal(await readDisplay(page), '10');
-
       await page.keyboard.press('h'); // history panel
       assert.equal(await page.locator('#side-panel').getAttribute('data-open'), 'true');
-      await page.tap('[data-panel-tab="memory"]');
-      assert.equal(await page.locator('#panel-memory .panel-item').count(), 1);
-
-      await page.keyboard.press('Control+l'); // MC
-      assert.equal(await page.locator('#panel-memory .panel-item').count(), 0);
-      assert.equal(await page.locator('#memory-badge').isVisible(), false);
+      assert.equal(await page.locator('#panel-history .panel-item').count(), 1);
+      await page.keyboard.press('h');
+      assert.equal(await page.locator('#side-panel').getAttribute('data-open'), 'false');
     });
   });
 
@@ -606,7 +594,7 @@ describe('webkit', () => {
     });
   });
 
-  test('mode, theme, history and memory survive a reload', { timeout: TIMEOUT }, async () => {
+  test('mode, theme and history survive a reload', { timeout: TIMEOUT }, async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
     try {
       await withApp(browser, { context }, async (page) => {
@@ -615,7 +603,6 @@ describe('webkit', () => {
         await page.tap('#theme-button'); // light -> dark
         await page.keyboard.type('11*11');
         await page.keyboard.press('Enter');
-        await page.keyboard.press('Control+m');
         assert.equal(await readDisplay(page), '121');
 
         await page.reload();
@@ -625,7 +612,7 @@ describe('webkit', () => {
         assert.equal(await page.locator('html').getAttribute('data-mode'), 'scientific');
         assert.equal(await page.locator('#keypad').getAttribute('data-rows'), '8');
         assert.equal(await readDisplay(page), '0', 'a reload starts a fresh calculation');
-        assert.ok(await page.locator('#memory-badge').isVisible());
+        assert.match(await page.locator('.tape-button').first().textContent(), /11 × 11 =121/);
 
         await page.tap('#history-button');
         assert.match(await page.locator('#panel-history .panel-item').first().textContent(), /11 × 11 =/);

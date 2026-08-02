@@ -2,13 +2,12 @@
  * The only module that touches the DOM.
  *
  * It renders the keypad from the layout data, forwards both pointer and
- * keyboard input into the engine, and persists mode/theme/history/memory.
+ * keyboard input into the engine, and persists the mode, theme and history.
  */
 
 import { CalculatorEngine } from './engine.js';
 import {
   LAYOUTS,
-  MEMORY_KEYS,
   TOOLBAR_KEYS,
   findActionForKeyboardEvent,
   resolveKey,
@@ -18,7 +17,6 @@ import { BIT_WIDTHS } from './programmer.js';
 const STORAGE_KEYS = {
   state: 'calculator:state',
   theme: 'calculator:theme',
-  panel: 'calculator:panel',
   installHint: 'calculator:install-hint',
 };
 
@@ -54,10 +52,8 @@ const elements = {
   expression: document.getElementById('expression'),
   display: document.getElementById('display'),
   parenBadge: document.getElementById('paren-badge'),
-  memoryBadge: document.getElementById('memory-badge'),
   toolbar: document.getElementById('toolbar'),
   baseList: document.getElementById('base-list'),
-  memoryRow: document.getElementById('memory-row'),
   keypad: document.getElementById('keypad'),
   themeButton: document.getElementById('theme-button'),
   themeIcon: document.getElementById('theme-icon'),
@@ -67,7 +63,6 @@ const elements = {
   panelClose: document.getElementById('panel-close'),
   panelClear: document.getElementById('panel-clear'),
   panelHistory: document.getElementById('panel-history'),
-  panelMemory: document.getElementById('panel-memory'),
   panelEmpty: document.getElementById('panel-empty'),
   installHint: document.getElementById('install-hint'),
   installHintText: document.getElementById('install-hint-text'),
@@ -88,7 +83,6 @@ const engine = CalculatorEngine.restore(readStoredState());
 
 const ui = {
   theme: THEMES.includes(storage.get(STORAGE_KEYS.theme)) ? storage.get(STORAGE_KEYS.theme) : 'system',
-  panelTab: storage.get(STORAGE_KEYS.panel) === 'memory' ? 'memory' : 'history',
   panelOpen: false,
   modeMenuOpen: false,
   keypadSignature: '',
@@ -113,7 +107,6 @@ function currentToolbarKeys() {
 function buildRegistry() {
   keyRegistry.clear();
   for (const key of currentLayout().keys) keyRegistry.set(key.id, key);
-  for (const key of MEMORY_KEYS) keyRegistry.set(key.id, key);
   for (const key of currentToolbarKeys()) keyRegistry.set(key.id, key);
 }
 
@@ -238,27 +231,6 @@ function renderBases(state) {
   });
 }
 
-function renderMemoryRow(state) {
-  if (elements.memoryRow.childElementCount === 0) {
-    const fragment = document.createDocumentFragment();
-    for (const key of MEMORY_KEYS) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'chip';
-      button.dataset.key = key.id;
-      button.textContent = key.label;
-      button.setAttribute('aria-label', key.aria);
-      fragment.append(button);
-    }
-    elements.memoryRow.replaceChildren(fragment);
-  }
-
-  for (const button of elements.memoryRow.querySelectorAll('[data-key]')) {
-    const key = MEMORY_KEYS.find((candidate) => candidate.id === button.dataset.key);
-    button.disabled = Boolean(key?.requiresMemory) && !state.hasMemory;
-  }
-}
-
 function displaySizeFor(text) {
   const length = text.length;
   if (length <= 9) return 'clamp(2rem, 10vw, 3rem)';
@@ -279,30 +251,18 @@ function renderDisplay(state) {
   } else {
     elements.parenBadge.hidden = true;
   }
-  elements.memoryBadge.hidden = !state.hasMemory;
 }
 
 function panelSignature(state) {
-  return JSON.stringify([
-    ui.panelTab,
-    state.history.map((entry) => [entry.id, entry.expression, entry.result]),
-    state.memory.map((entry) => entry.text),
-  ]);
+  return JSON.stringify(state.history.map((entry) => [entry.id, entry.expression, entry.result]));
 }
 
 function renderPanel(state) {
-  // Rebuilding the lists on every key press would throw away their scroll
+  // Rebuilding the list on every key press would throw away its scroll
   // position while the panel is open.
   const signature = panelSignature(state);
   if (signature === ui.panelSignature) return;
   ui.panelSignature = signature;
-
-  const isHistory = ui.panelTab === 'history';
-  for (const tab of elements.sidePanel.querySelectorAll('[data-panel-tab]')) {
-    tab.setAttribute('aria-selected', String(tab.dataset.panelTab === ui.panelTab));
-  }
-  elements.panelHistory.hidden = !isHistory;
-  elements.panelMemory.hidden = isHistory;
 
   const historyItems = state.history.map((entry) => {
     const item = document.createElement('li');
@@ -324,43 +284,7 @@ function renderPanel(state) {
     return item;
   });
   elements.panelHistory.replaceChildren(...historyItems);
-
-  const memoryItems = state.memory.map((entry) => {
-    const item = document.createElement('li');
-    item.className = 'panel-item';
-    item.dataset.memoryIndex = String(entry.index);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'panel-item-button panel-item-result';
-    button.dataset.panelAction = 'memory-recall';
-    button.dataset.index = String(entry.index);
-    button.textContent = entry.text;
-    const actions = document.createElement('div');
-    actions.className = 'panel-item-actions';
-    for (const [label, action, aria] of [
-      ['MC', 'memory-clear', 'Clear this memory'],
-      ['M+', 'memory-add', 'Add to this memory'],
-      ['M−', 'memory-subtract', 'Subtract from this memory'],
-    ]) {
-      const actionButton = document.createElement('button');
-      actionButton.type = 'button';
-      actionButton.className = 'chip';
-      actionButton.dataset.panelAction = action;
-      actionButton.dataset.index = String(entry.index);
-      actionButton.textContent = label;
-      actionButton.setAttribute('aria-label', aria);
-      actions.append(actionButton);
-    }
-    item.append(button, actions);
-    return item;
-  });
-  elements.panelMemory.replaceChildren(...memoryItems);
-
-  const isEmpty = isHistory ? state.history.length === 0 : state.memory.length === 0;
-  elements.panelEmpty.hidden = !isEmpty;
-  elements.panelEmpty.textContent = isHistory
-    ? "There's no history yet."
-    : "There's nothing saved in memory.";
+  elements.panelEmpty.hidden = state.history.length > 0;
 }
 
 function updateToggleStates() {
@@ -447,7 +371,6 @@ function render() {
   updateKeyAvailability();
   renderToolbar();
   renderBases(state);
-  renderMemoryRow(state);
   renderTape(state);
   renderDisplay(state);
   renderPanel(state);
@@ -464,11 +387,9 @@ function render() {
 function persist() {
   storage.set(STORAGE_KEYS.state, JSON.stringify(engine.toJSON()));
   storage.set(STORAGE_KEYS.theme, ui.theme);
-  storage.set(STORAGE_KEYS.panel, ui.panelTab);
 }
 
-function setPanelOpen(open, tab) {
-  if (tab) ui.panelTab = tab;
+function setPanelOpen(open) {
   ui.panelOpen = open;
   persist();
   render();
@@ -478,10 +399,7 @@ function dispatch(action) {
   if (!action) return;
   switch (action.type) {
     case 'ui-toggle-history':
-      setPanelOpen(!ui.panelOpen, 'history');
-      return;
-    case 'ui-open-memory':
-      setPanelOpen(true, 'memory');
+      setPanelOpen(!ui.panelOpen);
       return;
     case 'ui-cycle-angle-unit':
       if (engine.mode === 'scientific') engine.cycleAngleUnit();
@@ -521,19 +439,7 @@ function handlePanelAction(element) {
   switch (action) {
     case 'history-recall':
       dispatch({ type: 'history-recall', value: element.dataset.id });
-      setPanelOpen(window.innerWidth >= 720, ui.panelTab);
-      break;
-    case 'memory-recall':
-      dispatch({ type: 'memory-recall', value: index });
-      break;
-    case 'memory-add':
-      dispatch({ type: 'memory-add', value: index });
-      break;
-    case 'memory-subtract':
-      dispatch({ type: 'memory-subtract', value: index });
-      break;
-    case 'memory-clear':
-      dispatch({ type: 'memory-clear', value: index });
+      setPanelOpen(window.innerWidth >= 720);
       break;
     default:
       break;
@@ -588,10 +494,6 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  const panelTab = target.closest('[data-panel-tab]');
-  if (panelTab instanceof HTMLElement) {
-    setPanelOpen(true, panelTab.dataset.panelTab);
-  }
 });
 
 elements.themeButton.addEventListener('click', () => {
@@ -602,15 +504,14 @@ elements.themeButton.addEventListener('click', () => {
 });
 
 elements.historyButton.addEventListener('click', () => {
-  setPanelOpen(!ui.panelOpen, ui.panelTab);
+  setPanelOpen(!ui.panelOpen);
 });
 
 elements.panelClose.addEventListener('click', () => setPanelOpen(false));
 elements.panelBackdrop.addEventListener('click', () => setPanelOpen(false));
 
 elements.panelClear.addEventListener('click', () => {
-  if (ui.panelTab === 'history') dispatch({ type: 'history-clear' });
-  else dispatch({ type: 'memory-clear' });
+  dispatch({ type: 'history-clear' });
 });
 
 elements.modeMenuButton.addEventListener('click', () => {

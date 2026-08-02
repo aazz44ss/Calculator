@@ -88,7 +88,7 @@
               type="button"
               class="icon-button"
               id="history-button"
-              aria-label="History and memory"
+              aria-label="History"
               aria-expanded="false"
             >
               <span aria-hidden="true">🕘</span>
@@ -101,7 +101,6 @@
         <section class="display" id="display-area" aria-label="Display">
           <div class="display-badges">
             <span class="badge" id="paren-badge" hidden></span>
-            <span class="badge" id="memory-badge" hidden>M</span>
           </div>
           <div class="display-expression" id="expression" data-testid="expression"></div>
           <output class="display-value" id="display" aria-live="polite">0</output>
@@ -109,7 +108,6 @@
 
         <ul class="base-list" id="base-list" aria-label="Number bases" hidden></ul>
         <div class="toolbar" id="toolbar" hidden></div>
-        <div class="memory-row" id="memory-row"></div>
 
         <div class="keypad-area">
           <div class="keypad" id="keypad" role="group" aria-label="Keypad"></div>
@@ -123,38 +121,20 @@
         </p>
       </div>
 
-      <aside class="side-panel" id="side-panel" data-open="false" aria-label="History and memory">
-        <div class="panel-tabs" role="tablist" aria-label="Panel">
-          <button
-            type="button"
-            role="tab"
-            class="panel-tab"
-            data-panel-tab="history"
-            aria-selected="true"
-          >
-            History
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="panel-tab"
-            data-panel-tab="memory"
-            aria-selected="false"
-          >
-            Memory
-          </button>
+      <aside class="side-panel" id="side-panel" data-open="false" aria-label="History">
+        <div class="panel-tabs">
+          <h2 class="panel-title">History</h2>
           <button
             type="button"
             class="icon-button panel-close"
             id="panel-close"
-            aria-label="Close panel"
+            aria-label="Close history"
           >
             <span aria-hidden="true">✕</span>
           </button>
         </div>
         <div class="panel-body">
-          <ul class="panel-list" id="panel-history" data-panel="history"></ul>
-          <ul class="panel-list" id="panel-memory" data-panel="memory" hidden></ul>
+          <ul class="panel-list" id="panel-history"></ul>
           <p class="panel-empty" id="panel-empty">There's no history yet.</p>
         </div>
         <div class="panel-footer">

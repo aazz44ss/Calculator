@@ -26,54 +26,6 @@ const digit = (value) => ({
   keys: [value, `Numpad${value}`],
 });
 
-export const MEMORY_KEYS = [
-  {
-    id: 'memory-clear',
-    label: 'MC',
-    aria: 'Memory clear',
-    action: { type: 'memory-clear' },
-    variant: 'memory',
-    requiresMemory: true,
-  },
-  {
-    id: 'memory-recall',
-    label: 'MR',
-    aria: 'Memory recall',
-    action: { type: 'memory-recall' },
-    variant: 'memory',
-    requiresMemory: true,
-  },
-  {
-    id: 'memory-add',
-    label: 'M+',
-    aria: 'Memory add',
-    action: { type: 'memory-add' },
-    variant: 'memory',
-  },
-  {
-    id: 'memory-subtract',
-    label: 'M−',
-    aria: 'Memory subtract',
-    action: { type: 'memory-subtract' },
-    variant: 'memory',
-  },
-  {
-    id: 'memory-store',
-    label: 'MS',
-    aria: 'Memory store',
-    action: { type: 'memory-store' },
-    variant: 'memory',
-  },
-  {
-    id: 'memory-open',
-    label: 'M▾',
-    aria: 'Open memory list',
-    action: { type: 'ui-open-memory' },
-    variant: 'memory',
-    requiresMemory: true,
-  },
-];
-
 /** The bit width selector above the programmer keypad. */
 export const PROGRAMMER_TOOLBAR_KEYS = [
   {
@@ -789,7 +741,6 @@ export function resolveKey(key, state = {}) {
     action: face.action ?? key.action,
     variant: key.variant,
     span: key.span ?? 1,
-    requiresMemory: Boolean(key.requiresMemory),
   };
 }
 
@@ -801,11 +752,6 @@ export function resolveKey(key, state = {}) {
  * programmer mode, the same overlap Windows has.
  */
 export const KEYBOARD_SHORTCUTS = [
-  { key: 'm', ctrl: true, action: { type: 'memory-store' } },
-  { key: 'p', ctrl: true, action: { type: 'memory-add' } },
-  { key: 'q', ctrl: true, action: { type: 'memory-subtract' } },
-  { key: 'r', ctrl: true, action: { type: 'memory-recall' } },
-  { key: 'l', ctrl: true, action: { type: 'memory-clear' } },
   { key: 'h', action: { type: 'ui-toggle-history' } },
   { key: 'h', ctrl: true, action: { type: 'ui-toggle-history' } },
   { key: '1', alt: true, action: { type: 'mode', value: 'standard' } },

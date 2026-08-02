@@ -151,7 +151,6 @@ const ERROR_SAFE_TYPES = new Set([
   'toggle-fe',
   'number-base',
   'bit-width',
-  'memory-clear',
   'history-clear',
 ]);
 
@@ -247,7 +246,6 @@ export class CalculatorEngine {
     this.second = Boolean(options.second);
     this.hyp = Boolean(options.hyp);
     this.fe = Boolean(options.fe);
-    this.memory = (options.memory ?? []).map((item) => Decimal.from(item));
     this.history = (options.history ?? []).map((item) => ({
       id: item.id ?? nextId('history'),
       expression: String(item.expression ?? ''),
@@ -363,11 +361,6 @@ export class CalculatorEngine {
       hyp: this.hyp,
       fe: this.fe,
       parenDepth: this.parenDepth,
-      hasMemory: this.memory.length > 0,
-      memory: this.memory.map((item, index) => ({
-        index,
-        text: this.format(item),
-      })),
       history: this.history.map((item) => ({
         id: item.id,
         expression: item.expression,
@@ -385,7 +378,6 @@ export class CalculatorEngine {
       second: this.second,
       hyp: this.hyp,
       fe: this.fe,
-      memory: this.memory.map((item) => item.toString()),
       history: this.history.map((item) => ({
         id: item.id,
         expression: item.expression,
@@ -458,21 +450,6 @@ export class CalculatorEngine {
       case 'constant':
         this.inputConstant(String(value));
         break;
-      case 'memory-store':
-        this.memoryStore();
-        break;
-      case 'memory-add':
-        this.memoryAdd(1, value);
-        break;
-      case 'memory-subtract':
-        this.memoryAdd(-1, value);
-        break;
-      case 'memory-recall':
-        this.memoryRecall(value);
-        break;
-      case 'memory-clear':
-        this.memoryClear(value);
-        break;
       case 'history-recall':
         this.recallHistory(String(value));
         break;
@@ -521,14 +498,9 @@ export class CalculatorEngine {
     const types = TYPES_BY_MODE[this.mode];
     if (!types) return true;
 
-    // Memory, history and mode switching work everywhere.
+    // History and mode switching work everywhere.
     if (!types.has(type)) {
-      return (
-        type.startsWith('memory-') ||
-        type.startsWith('history-') ||
-        type === 'mode' ||
-        type.startsWith('ui-')
-      );
+      return type.startsWith('history-') || type === 'mode' || type.startsWith('ui-');
     }
 
     if (type === 'operator') return OPERATORS_BY_MODE[this.mode].has(String(value));
@@ -873,7 +845,7 @@ export class CalculatorEngine {
    * ---------------------------------------------------------------- */
 
   clearAll() {
-    // Memory, history, mode and the toggles survive "C", exactly like Windows.
+    // History, mode and the toggles survive "C", exactly like Windows.
     return this.reset();
   }
 
@@ -925,49 +897,6 @@ export class CalculatorEngine {
     } else {
       this.entry = trimmed;
     }
-    return this;
-  }
-
-  /* ---------------------------------------------------------------- *
-   * Memory
-   * ---------------------------------------------------------------- */
-
-  memoryStore() {
-    this.memory.unshift(this.currentValue());
-    this.hasFreshOperand = true;
-    return this;
-  }
-
-  memoryAdd(direction, index) {
-    const value = this.currentValue();
-    const delta = direction < 0 ? value.negate() : value;
-    if (this.memory.length === 0) {
-      this.memory.unshift(delta);
-      return this;
-    }
-    const target = Number.isInteger(index) ? index : 0;
-    if (target < 0 || target >= this.memory.length) return this;
-    this.memory[target] = this.memory[target].add(delta);
-    return this;
-  }
-
-  memoryRecall(index) {
-    const target = Number.isInteger(index) ? index : 0;
-    if (target < 0 || target >= this.memory.length) return this;
-    this.startNewCalculationIfSettled();
-    this.value = this.memory[target];
-    this.entry = null;
-    this.operandExpression = null;
-    this.hasFreshOperand = true;
-    return this;
-  }
-
-  memoryClear(index) {
-    if (Number.isInteger(index)) {
-      if (index >= 0 && index < this.memory.length) this.memory.splice(index, 1);
-      return this;
-    }
-    this.memory = [];
     return this;
   }
 
