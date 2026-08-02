@@ -108,8 +108,10 @@ body {
   grid-template-columns: minmax(0, 1fr);
   height: 100vh;
   height: 100dvh;
+  /* The home indicator only needs clearance, not the whole inset, so the last
+     row of keys can sit closer to the bottom edge. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+    max(6px, calc(env(safe-area-inset-bottom) * 0.6)) env(safe-area-inset-left);
 }
 
 .calculator {
@@ -120,7 +122,7 @@ body {
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
-  padding: var(--pane-padding);
+  padding: var(--pane-padding) var(--pane-padding) 0;
   gap: clamp(4px, 1.2vw, 10px);
 }
 
@@ -268,7 +270,7 @@ body {
 /* Programmer mode also lists the value in four bases, so the tape settles for
    fewer lines there to keep the eight rows of keys usable. */
 html[data-mode="programmer"] .tape:not(:empty) {
-  min-height: clamp(2.25rem, 7vh, 4rem);
+  min-height: clamp(2.5rem, 10vh, 5rem);
 }
 
 /* Keeps its box so the layout does not jump, but stops being a tap target. */
@@ -317,9 +319,9 @@ html[data-mode="programmer"] .tape:not(:empty) {
 
 .display {
   flex: 0 0 auto;
-  /* Tall enough for the expression and the largest value; the badge row above
-     it collapses when there is nothing to show, leaving that space to the tape. */
-  min-height: 5.5rem;
+  /* Only as tall as it needs to be: the badge row and the expression line both
+     collapse when empty, and everything they give up goes to the tape. */
+  min-height: 4.5rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -341,6 +343,10 @@ html[data-mode="programmer"] .tape:not(:empty) {
   direction: ltr;
 }
 
+.display-expression:empty {
+  min-height: 0;
+}
+
 .display-value {
   width: 100%;
   font-size: var(--display-size);
@@ -357,7 +363,7 @@ html[data-mode="programmer"] .tape:not(:empty) {
 /* The four base rows already spell the value out, so programmer mode gets a
    smaller headline and spends the height on keys and the tape instead. */
 html[data-mode="programmer"] .display {
-  min-height: 4.25rem;
+  min-height: 3.25rem;
 }
 
 html[data-mode="programmer"] .display-value {
