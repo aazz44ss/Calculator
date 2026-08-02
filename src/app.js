@@ -388,7 +388,8 @@ const MIN_TAPE_HEIGHT = 22;
 /**
  * A keypad with many rows can leave the tape without usable height. Entries
  * would then be clipped out of sight while still sitting in the DOM, so hide
- * the whole strip rather than leave targets nobody can reach.
+ * the whole strip rather than leave targets nobody can reach. Called at the
+ * end of every render, and again by the observer when the window resizes.
  */
 function updateTapeVisibility() {
   const collapsed = elements.tape.clientHeight < MIN_TAPE_HEIGHT;
@@ -424,7 +425,6 @@ function renderTape(state) {
     return item;
   });
   elements.tape.replaceChildren(...items);
-  updateTapeVisibility();
 }
 
 function renderTheme() {
@@ -452,6 +452,9 @@ function render() {
   renderDisplay(state);
   renderPanel(state);
   renderPanelVisibility();
+  // Last, and on every render: switching keypads changes how much height is
+  // left for the tape even when its contents did not change.
+  updateTapeVisibility();
 }
 
 /* ------------------------------------------------------------------ *

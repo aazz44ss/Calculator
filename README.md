@@ -160,7 +160,7 @@ RAD in scientific mode and WORD in programmer mode.
 
 ```bash
 npm test          # 88 unit tests: decimals, formatting, state machine, bases
-npm run test:e2e  # 21 WebKit end-to-end tests + 1 Chromium offline test
+npm run test:e2e  # 22 WebKit end-to-end tests + 1 Chromium offline test
 ```
 
 The end-to-end suite drives the real dev server through Playwright and covers
@@ -186,14 +186,18 @@ These are all covered by tests, so they stay fixed:
    it uses `flex-basis: 0` so it can only take space the keypad does not want.
    Otherwise keys stretch into tall strips on phones with a lot of vertical
    room, or a long history squeezes them flat.
-3. `<link rel="apple-touch-icon">` in the HTML wins over the manifest icons in
+3. A browser tab is much shorter than the screen because of the URL bar, which
+   left the tape with zero height and no visible history at all. It now keeps a
+   minimum of a few lines once it has entries, and the keypad gives up the
+   difference; the browser suite checks three short viewports.
+4. `<link rel="apple-touch-icon">` in the HTML wins over the manifest icons in
    Safari, so that file has to exist at 180×180.
-4. Degree and gradian angles are reduced against a quarter turn with exact
+5. Degree and gradian angles are reduced against a quarter turn with exact
    decimal arithmetic before any double precision maths happens.
-5. Playwright's WebKit cannot reload after `setOffline(true)` (it throws an
+6. Playwright's WebKit cannot reload after `setOffline(true)` (it throws an
    internal error), so the offline reload test runs in Chromium while the
    WebKit suite asserts that the cache holds the complete shell.
-6. `http://` on a LAN address is not a secure origin, so no service worker
+7. `http://` on a LAN address is not a secure origin, so no service worker
    there — the dev server says so explicitly.
-7. The expression line keeps `12 × 12 =` after pressing equals until a new
+8. The expression line keeps `12 × 12 =` after pressing equals until a new
    calculation begins.

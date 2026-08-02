@@ -530,6 +530,35 @@ describe('webkit', () => {
     });
   });
 
+  test('the tape stays visible in a short browser viewport', { timeout: TIMEOUT }, async () => {
+    // Safari keeps a URL bar, so the page is far shorter than the screen. The
+    // keypad has to give the tape room instead of squeezing it out of sight.
+    for (const [width, height] of [
+      [390, 734],
+      [390, 664],
+      [375, 635],
+    ]) {
+      await withApp(browser, { width, height }, async (page) => {
+        await page.keyboard.type('6*7');
+        await page.keyboard.press('Enter');
+
+        const tape = page.locator('#tape');
+        assert.equal(await tape.isVisible(), true, `tape hidden at ${width}x${height}`);
+        const box = await tape.boundingBox();
+        assert.ok(box.height >= 40, `tape is only ${box.height}px at ${width}x${height}`);
+
+        const entry = page.locator('.tape-button').first();
+        assert.match(await entry.textContent(), /6 × 7 =42/);
+        await entry.tap();
+        assert.equal(await readDisplay(page), '42');
+
+        // The keys give up height for it but must stay comfortably tappable.
+        const key = await page.locator(keySelector('digit-5')).boundingBox();
+        assert.ok(key.height >= 44, `keys shrank to ${key.height}px at ${width}x${height}`);
+      });
+    }
+  });
+
   test('history is a drawer on phones and a rail on wide screens', { timeout: TIMEOUT }, async () => {
     await withApp(browser, { width: 390, height: 844 }, async (page) => {
       const panel = page.locator('#side-panel');

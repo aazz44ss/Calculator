@@ -242,6 +242,9 @@ body {
   /* Basis 0 so the tape only ever uses space the keypad does not want. */
   flex: 1 1 0;
   min-height: 0;
+  /* ...except that once there is something to show it always keeps a few
+     lines, even in a browser tab where the URL bar eats the screen. The
+     keypad gives up the difference, see .tape:not(:empty) below. */
   margin: 0;
   padding: 0 2px;
   list-style: none;
@@ -256,6 +259,15 @@ body {
   /* Older entries fade out as they scroll past the top edge. */
   mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+
+.tape:not(:empty) {
+  min-height: clamp(2.25rem, 7vh, 4.5rem);
+}
+
+/* Programmer mode already lists the value in four bases up there. */
+html[data-mode="programmer"] .tape {
+  min-height: 0;
 }
 
 /* Keeps its box so the layout does not jump, but stops being a tap target. */
