@@ -414,6 +414,11 @@ describe('webkit', () => {
       const decimalRow = await page.textContent('[data-base="dec"]');
       assert.match(decimalRow, /-1/);
 
+      // The tape is here too, next to the four bases.
+      const tapeEntry = page.locator('.tape-button').first();
+      assert.equal(await page.locator('#tape').isVisible(), true);
+      assert.match(await tapeEntry.textContent(), /FF AND F =F/);
+
       // Keyboard: F8 selects BIN, and hex letters type digits.
       await page.keyboard.press('F8');
       assert.equal(await readDisplay(page), '1111 1111');
@@ -519,7 +524,7 @@ describe('webkit', () => {
           );
           return button.contains(hit) ? 'reachable' : 'blocked';
         });
-        assert.notEqual(reachable, 'blocked', `tape entries are unreachable in ${mode} mode`);
+        assert.equal(reachable, 'reachable', `the tape is not usable in ${mode} mode`);
       }
     });
   });
