@@ -12,7 +12,6 @@ import {
   findActionForKeyboardEvent,
   resolveKey,
 } from './layout.js';
-import { BIT_WIDTHS } from './programmer.js';
 
 const STORAGE_KEYS = {
   state: 'calculator:state',
@@ -180,12 +179,6 @@ function renderToolbar() {
     if (button.dataset.key === 'angle-unit') {
       button.textContent = ANGLE_LABELS[engine.angleUnit];
       button.title = `Angle unit: ${ANGLE_LABELS[engine.angleUnit]}`;
-      continue;
-    }
-    if (button.dataset.key === 'bit-width') {
-      const width = BIT_WIDTHS.find((item) => item.id === engine.bitWidth);
-      button.textContent = width.label;
-      button.title = `Bit width: ${width.label} (${width.bits} bits)`;
       continue;
     }
     const pressed = button.dataset.key === 'toggle-hyp' ? engine.hyp : engine.fe;
@@ -403,9 +396,6 @@ function dispatch(action) {
       return;
     case 'ui-cycle-angle-unit':
       if (engine.mode === 'scientific') engine.cycleAngleUnit();
-      break;
-    case 'ui-cycle-bit-width':
-      if (engine.mode === 'programmer') engine.cycleBitWidth();
       break;
     default:
       engine.press(action);

@@ -36,16 +36,13 @@ import {
 } from './decimal.js';
 import { OPERATOR_SYMBOLS, formatEntry, formatExpression, formatValue } from './format.js';
 import {
-  BIT_WIDTHS,
   DEFAULT_BASE,
-  DEFAULT_BIT_WIDTH,
+  MASK,
   NUMBER_BASES,
   ProgrammerError,
-  bitsForWidth,
   computeInteger,
   formatInteger,
   isDigitInBase,
-  maskFor,
   notInteger,
   parseDigits,
   wrapSigned,
@@ -110,7 +107,6 @@ const TYPES_BY_MODE = {
     'paren-open',
     'paren-close',
     'number-base',
-    'bit-width',
   ]),
 };
 
@@ -150,7 +146,6 @@ const ERROR_SAFE_TYPES = new Set([
   'toggle-hyp',
   'toggle-fe',
   'number-base',
-  'bit-width',
   'history-clear',
 ]);
 
@@ -240,9 +235,6 @@ export class CalculatorEngine {
     this.mode = MODES.includes(options.mode) ? options.mode : 'standard';
     this.angleUnit = ANGLE_UNITS.includes(options.angleUnit) ? options.angleUnit : 'deg';
     this.base = NUMBER_BASES.some((item) => item.id === options.base) ? options.base : DEFAULT_BASE;
-    this.bitWidth = BIT_WIDTHS.some((item) => item.id === options.bitWidth)
-      ? options.bitWidth
-      : DEFAULT_BIT_WIDTH;
     this.second = Boolean(options.second);
     this.hyp = Boolean(options.hyp);
     this.fe = Boolean(options.fe);
@@ -277,23 +269,19 @@ export class CalculatorEngine {
     return this.mode === 'programmer';
   }
 
-  get bits() {
-    return bitsForWidth(this.bitWidth);
-  }
-
   /** The current value as a BigInt, only meaningful in programmer mode. */
   toBigInt(value = this.currentValue()) {
-    return wrapSigned(BigInt(value.truncateTo(0).toString()), this.bits);
+    return wrapSigned(BigInt(value.truncateTo(0).toString()));
   }
 
   fromBigInt(value) {
-    return Decimal.fromString(wrapSigned(value, this.bits).toString());
+    return Decimal.fromString(wrapSigned(value).toString());
   }
 
   /** Render a value the way the current mode displays numbers. */
   format(value) {
     if (this.isProgrammer) {
-      return formatInteger(BigInt(value.truncateTo(0).toString()), this.base, this.bits);
+      return formatInteger(BigInt(value.truncateTo(0).toString()), this.base);
     }
     return formatValue(value, { fe: this.fe });
   }
@@ -348,14 +336,13 @@ export class CalculatorEngine {
       mode: this.mode,
       angleUnit: this.angleUnit,
       base: this.base,
-      bitWidth: this.bitWidth,
       bases: NUMBER_BASES.map((item) => ({
         id: item.id,
         label: item.label,
         active: item.id === this.base,
         text: this.error
           ? '0'
-          : formatInteger(BigInt(value.truncateTo(0).toString()), item.id, this.bits),
+          : formatInteger(BigInt(value.truncateTo(0).toString()), item.id),
       })),
       second: this.second,
       hyp: this.hyp,
@@ -374,7 +361,6 @@ export class CalculatorEngine {
       mode: this.mode,
       angleUnit: this.angleUnit,
       base: this.base,
-      bitWidth: this.bitWidth,
       second: this.second,
       hyp: this.hyp,
       fe: this.fe,
@@ -464,9 +450,6 @@ export class CalculatorEngine {
         break;
       case 'number-base':
         this.setBase(String(value));
-        break;
-      case 'bit-width':
-        this.setBitWidth(String(value));
         break;
       case 'toggle-second':
         this.second = !this.second;
@@ -565,7 +548,7 @@ export class CalculatorEngine {
 
     const next = this.entry === null || this.entry === '0' ? digit : this.entry + digit;
     // Refuse a keystroke that would not fit the selected bit width.
-    if (parseDigits(next, this.base) > maskFor(this.bits)) return;
+    if (parseDigits(next, this.base) > MASK) return;
     this.entry = next;
     this.hasFreshOperand = true;
   }
@@ -641,7 +624,7 @@ export class CalculatorEngine {
     if (this.isProgrammer) {
       try {
         return this.fromBigInt(
-          computeInteger(this.toBigInt(left), operator, this.toBigInt(right), this.bits),
+          computeInteger(this.toBigInt(left), operator, this.toBigInt(right)),
         );
       } catch (error) {
         if (error instanceof ProgrammerError) throw new DecimalError(error.message);
@@ -737,7 +720,7 @@ export class CalculatorEngine {
       const value = this.currentValue();
       const token = this.currentOperandToken();
       const result = this.isProgrammer
-        ? this.fromBigInt(notInteger(this.toBigInt(value), this.bits))
+        ? this.fromBigInt(notInteger(this.toBigInt(value)))
         : this.guardResult(fn(value, this.angleUnit));
       this.value = result;
       this.entry = null;
@@ -954,20 +937,6 @@ export class CalculatorEngine {
     }
     this.base = base;
     return this;
-  }
-
-  setBitWidth(width) {
-    if (!BIT_WIDTHS.some((item) => item.id === width)) return this;
-    const value = this.currentValue();
-    this.entry = null;
-    this.bitWidth = width;
-    this.value = this.fromBigInt(BigInt(value.truncateTo(0).toString()));
-    return this;
-  }
-
-  cycleBitWidth() {
-    const index = BIT_WIDTHS.findIndex((item) => item.id === this.bitWidth);
-    return this.setBitWidth(BIT_WIDTHS[(index + 1) % BIT_WIDTHS.length].id);
   }
 
   setAngleUnit(unit) {

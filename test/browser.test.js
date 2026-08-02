@@ -376,7 +376,6 @@ describe('webkit', () => {
       const keypad = page.locator('#keypad');
       assert.equal(await keypad.getAttribute('data-columns'), '5');
       assert.equal(await keypad.getAttribute('data-rows'), '8');
-      assert.equal(await page.locator(keySelector('bit-width')).textContent(), 'QWORD');
 
       await tapDigits(page, '255');
       const bases = await page.evaluate(() =>
@@ -406,22 +405,20 @@ describe('webkit', () => {
       assert.equal(await readDisplay(page), 'F');
       assert.equal(await readExpression(page), 'FF AND F =');
 
-      // Narrowing the width makes NOT 0 wrap to a single byte.
-      await tap(page, 'clear', 'bit-width');
-      assert.equal(await page.locator(keySelector('bit-width')).textContent(), 'BYTE');
+      // NOT works on all 64 bits.
+      await tap(page, 'clear');
       await tap(page, 'digit-0', 'not');
-      assert.equal(await readDisplay(page), 'FF');
-      const decimalRow = await page.textContent('[data-base="dec"]');
-      assert.match(decimalRow, /-1/);
+      assert.equal(await readDisplay(page), 'FFFF FFFF FFFF FFFF');
+      assert.match(await page.textContent('[data-base="dec"]'), /-1/);
 
       // The tape is here too, next to the four bases.
       const tapeEntry = page.locator('.tape-button').first();
       assert.equal(await page.locator('#tape').isVisible(), true);
       assert.match(await tapeEntry.textContent(), /FF AND F =F/);
 
-      // Keyboard: F8 selects BIN, and hex letters type digits.
+      // Keyboard: F8 selects BIN.
       await page.keyboard.press('F8');
-      assert.equal(await readDisplay(page), '1111 1111');
+      assert.equal(await readDisplay(page), `${'1111 '.repeat(15)}1111`);
       assert.equal(
         await page.locator('[data-base="bin"]').getAttribute('aria-pressed'),
         'true',

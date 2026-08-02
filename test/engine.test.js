@@ -344,7 +344,6 @@ test('keyboard panel, mode and scientific bindings are separated by modifier and
 
   // The same function keys mean different things per keypad, as on Windows.
   assert.deepEqual(lookup({ key: 'F4' }, 'scientific').action, { type: 'angle-unit', value: 'rad' });
-  assert.deepEqual(lookup({ key: 'F4' }, 'programmer').action, { type: 'bit-width', value: 'dword' });
   assert.deepEqual(lookup({ key: 'F5' }, 'programmer').action, { type: 'number-base', value: 'hex' });
   assert.deepEqual(lookup({ key: 'd' }, 'programmer').action, { type: 'digit', value: 'D' });
   assert.deepEqual(lookup({ key: '&' }, 'programmer').action, { type: 'operator', value: 'and' });

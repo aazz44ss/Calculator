@@ -10,7 +10,7 @@ working offline.
 - **Scientific mode** — 5 × 8 keypad with 2nd / HYP, DEG-RAD-GRAD, F-E and
   stacked brackets.
 - **Programmer mode** — 5 × 8 keypad with HEX/DEC/OCT/BIN shown side by side,
-  BYTE to QWORD widths, two's complement, AND/OR/XOR/NOT/NAND/NOR, shifts and
+  signed 64 bit two's complement, AND/OR/XOR/NOT/NAND/NOR, shifts and
   rotations.
 - **Exact decimals** — `0.1 + 0.2` shows `0.3` and `0.07 × 100` is `7`, because
   arithmetic runs on a BigInt fixed-point decimal rather than on doubles.
@@ -108,11 +108,10 @@ a new calculation starts, which is what the engine's `settledExpression` field
 is for.
 
 `src/programmer.js` does the same job for programmer mode, on plain BigInts
-read as two's complement numbers of the chosen width. That is why `NOT 0` is
-`-1` in DEC and `FFFF FFFF FFFF FFFF` in HEX at the same time, why `200` becomes
-`-56` when you switch to BYTE, and why division truncates instead of rounding.
-The keypad greys out whatever the active base cannot accept, so `A`-`F` only
-light up in HEX and `8`/`9` go dark in OCT.
+read as signed 64 bit two's complement numbers. That is why `NOT 0` is `-1` in
+DEC and `FFFF FFFF FFFF FFFF` in HEX at the same time, and why division
+truncates instead of rounding. The keypad greys out whatever the active base
+cannot accept, so `A`-`F` only light up in HEX and `8`/`9` go dark in OCT.
 
 `src/layout.js` holds every key as data — label, accessible name, engine action,
 2nd/HYP variants and keyboard bindings — and both the renderer and the keyboard
@@ -149,10 +148,10 @@ Programmer keypad only:
 | --- | --- | --- | --- |
 | `A`–`F` | hex digits | `&` `\|` `^` `~` | AND / OR / XOR / NOT |
 | `<` `>` | shift left / right | `M` | mod |
-| `F5`–`F8` | HEX / DEC / OCT / BIN | `F2` `F3` `F4` `F12` | BYTE / WORD / DWORD / QWORD |
+| `F5`–`F8` | HEX / DEC / OCT / BIN | | |
 
-Shortcuts belonging to another keypad do nothing, which is why `F3` can mean
-RAD in scientific mode and WORD in programmer mode.
+Shortcuts belonging to another keypad do nothing, which is why `F5` can mean
+GRAD in scientific mode and HEX in programmer mode.
 
 ## Tests
 

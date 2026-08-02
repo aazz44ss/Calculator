@@ -1,8 +1,8 @@
 /**
  * Integer maths for programmer mode.
  *
- * Values are plain BigInts interpreted as two's complement numbers of the
- * selected bit width, which is what makes `NOT 0` show as `-1` in DEC and as
+ * Values are plain BigInts interpreted as 64 bit two's complement numbers,
+ * which is what makes `NOT 0` show as `-1` in DEC and as
  * `FFFF FFFF FFFF FFFF` in HEX at the same time.
  */
 
@@ -15,12 +15,9 @@ export class ProgrammerError extends Error {
   }
 }
 
-export const BIT_WIDTHS = [
-  { id: 'byte', label: 'BYTE', bits: 8n },
-  { id: 'word', label: 'WORD', bits: 16n },
-  { id: 'dword', label: 'DWORD', bits: 32n },
-  { id: 'qword', label: 'QWORD', bits: 64n },
-];
+/** Everything is a signed 64 bit integer, like QWORD on Windows. */
+export const WIDTH_BITS = 64n;
+export const MASK = (1n << WIDTH_BITS) - 1n;
 
 export const NUMBER_BASES = [
   { id: 'hex', label: 'HEX', radix: 16n, digits: '0123456789ABCDEF', group: 4 },
@@ -30,31 +27,20 @@ export const NUMBER_BASES = [
 ];
 
 export const DEFAULT_BASE = 'dec';
-export const DEFAULT_BIT_WIDTH = 'qword';
-
-export function bitsForWidth(widthId) {
-  const width = BIT_WIDTHS.find((candidate) => candidate.id === widthId);
-  return (width ?? BIT_WIDTHS[BIT_WIDTHS.length - 1]).bits;
-}
 
 export function baseFor(baseId) {
   return NUMBER_BASES.find((candidate) => candidate.id === baseId) ?? NUMBER_BASES[1];
 }
 
-export function maskFor(bits) {
-  return (1n << bits) - 1n;
+/** Reinterpret `value` as a signed 64 bit two's complement number. */
+export function wrapSigned(value) {
+  const unsigned = ((value % (MASK + 1n)) + MASK + 1n) & MASK;
+  return unsigned >= 1n << (WIDTH_BITS - 1n) ? unsigned - (MASK + 1n) : unsigned;
 }
 
-/** Reinterpret `value` as a signed two's complement number of `bits` bits. */
-export function wrapSigned(value, bits) {
-  const mask = maskFor(bits);
-  const unsigned = ((value % (mask + 1n)) + mask + 1n) & mask;
-  return unsigned >= 1n << (bits - 1n) ? unsigned - (mask + 1n) : unsigned;
-}
-
-/** The bit pattern of `value` at `bits` width, always non-negative. */
-export function toUnsigned(value, bits) {
-  return wrapSigned(value, bits) & maskFor(bits);
+/** The bit pattern of `value`, always non-negative. */
+export function toUnsigned(value) {
+  return wrapSigned(value) & MASK;
 }
 
 export function isDigitInBase(digit, baseId) {
@@ -86,85 +72,83 @@ function groupFromRight(text, size) {
  * Render a value in one of the four bases. DEC keeps the sign, the other
  * bases show the raw bit pattern, exactly like Windows Calculator.
  */
-export function formatInteger(value, baseId, bits) {
+export function formatInteger(value, baseId) {
   const base = baseFor(baseId);
   if (base.id === 'dec') {
-    const signed = wrapSigned(value, bits);
+    const signed = wrapSigned(value);
     const text = groupDigits((signed < 0n ? -signed : signed).toString(10));
     return signed < 0n ? `-${text}` : text;
   }
-  const digits = toUnsigned(value, bits).toString(Number(base.radix)).toUpperCase();
+  const digits = toUnsigned(value).toString(Number(base.radix)).toUpperCase();
   return groupFromRight(digits, base.group);
 }
 
-/** How many digits of `baseId` still fit inside `bits` bits. */
-export function maxDigitsFor(baseId, bits) {
+/** How many digits of `baseId` still fit into 64 bits. */
+export function maxDigitsFor(baseId) {
   const base = baseFor(baseId);
-  if (base.id === 'dec') return maskFor(bits).toString(10).length;
+  if (base.id === 'dec') return MASK.toString(10).length;
   const perDigit = { hex: 4n, oct: 3n, bin: 1n }[base.id];
-  return Number((bits + perDigit - 1n) / perDigit);
+  return Number((WIDTH_BITS + perDigit - 1n) / perDigit);
 }
 
-function shiftAmount(value, bits) {
-  const amount = wrapSigned(value, bits);
+function shiftAmount(value) {
+  const amount = wrapSigned(value);
   if (amount < 0n) throw new ProgrammerError('Invalid input');
-  return amount > bits ? bits : amount;
+  return amount > WIDTH_BITS ? WIDTH_BITS : amount;
 }
 
 /**
  * @param {bigint} left
  * @param {string} operator
  * @param {bigint} right
- * @param {bigint} bits
  * @returns {bigint}
  */
-export function computeInteger(left, operator, right, bits) {
-  const mask = maskFor(bits);
-  const leftBits = toUnsigned(left, bits);
-  const rightBits = toUnsigned(right, bits);
+export function computeInteger(left, operator, right) {
+  const leftBits = toUnsigned(left);
+  const rightBits = toUnsigned(right);
 
   switch (operator) {
     case 'add':
-      return wrapSigned(left + right, bits);
+      return wrapSigned(left + right);
     case 'subtract':
-      return wrapSigned(left - right, bits);
+      return wrapSigned(left - right);
     case 'multiply':
-      return wrapSigned(left * right, bits);
+      return wrapSigned(left * right);
     case 'divide':
       if (right === 0n) throw new ProgrammerError('Cannot divide by zero');
-      return wrapSigned(left / right, bits); // BigInt division truncates
+      return wrapSigned(left / right); // BigInt division truncates
     case 'mod':
       if (right === 0n) throw new ProgrammerError('Cannot divide by zero');
-      return wrapSigned(left % right, bits);
+      return wrapSigned(left % right);
     case 'and':
-      return wrapSigned(leftBits & rightBits, bits);
+      return wrapSigned(leftBits & rightBits);
     case 'or':
-      return wrapSigned(leftBits | rightBits, bits);
+      return wrapSigned(leftBits | rightBits);
     case 'xor':
-      return wrapSigned(leftBits ^ rightBits, bits);
+      return wrapSigned(leftBits ^ rightBits);
     case 'nand':
-      return wrapSigned(~(leftBits & rightBits) & mask, bits);
+      return wrapSigned(~(leftBits & rightBits) & MASK);
     case 'nor':
-      return wrapSigned(~(leftBits | rightBits) & mask, bits);
+      return wrapSigned(~(leftBits | rightBits) & MASK);
     case 'lsh':
-      return wrapSigned(left << shiftAmount(right, bits), bits);
+      return wrapSigned(left << shiftAmount(right));
     case 'rsh':
-      return wrapSigned(left >> shiftAmount(right, bits), bits); // arithmetic
+      return wrapSigned(left >> shiftAmount(right)); // arithmetic
     case 'rol': {
-      const places = shiftAmount(right, bits) % bits;
-      if (places === 0n) return wrapSigned(left, bits);
-      return wrapSigned(((leftBits << places) | (leftBits >> (bits - places))) & mask, bits);
+      const places = shiftAmount(right) % WIDTH_BITS;
+      if (places === 0n) return wrapSigned(left);
+      return wrapSigned(((leftBits << places) | (leftBits >> (WIDTH_BITS - places))) & MASK);
     }
     case 'ror': {
-      const places = shiftAmount(right, bits) % bits;
-      if (places === 0n) return wrapSigned(left, bits);
-      return wrapSigned(((leftBits >> places) | (leftBits << (bits - places))) & mask, bits);
+      const places = shiftAmount(right) % WIDTH_BITS;
+      if (places === 0n) return wrapSigned(left);
+      return wrapSigned(((leftBits >> places) | (leftBits << (WIDTH_BITS - places))) & MASK);
     }
     default:
       throw new ProgrammerError('Invalid input');
   }
 }
 
-export function notInteger(value, bits) {
-  return wrapSigned(~toUnsigned(value, bits), bits);
+export function notInteger(value) {
+  return wrapSigned(~toUnsigned(value));
 }

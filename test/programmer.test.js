@@ -14,10 +14,9 @@ import {
   wrapSigned,
 } from '../src/programmer.js';
 
-const BYTE = 8n;
-const WORD = 16n;
-const DWORD = 32n;
-const QWORD = 64n;
+const MAX_SIGNED = 2n ** 63n - 1n;
+const MIN_SIGNED = -(2n ** 63n);
+const ALL_ONES = 2n ** 64n - 1n;
 
 const digit = (value) => ({ type: 'digit', value });
 const operator = (value) => ({ type: 'operator', value });
@@ -43,20 +42,20 @@ const basesOf = (engine) =>
  * Bit width arithmetic
  * ------------------------------------------------------------------ */
 
-test('values wrap into two\'s complement at the selected width', () => {
-  assert.equal(wrapSigned(200n, BYTE), -56n);
-  assert.equal(wrapSigned(255n, BYTE), -1n);
-  assert.equal(wrapSigned(127n, BYTE), 127n);
-  assert.equal(wrapSigned(128n, BYTE), -128n);
-  assert.equal(wrapSigned(-1n, QWORD), -1n);
-  assert.equal(wrapSigned(65536n, WORD), 0n);
+test('values wrap into 64 bit two\'s complement', () => {
+  assert.equal(wrapSigned(200n), 200n);
+  assert.equal(wrapSigned(MAX_SIGNED), MAX_SIGNED);
+  assert.equal(wrapSigned(MAX_SIGNED + 1n), MIN_SIGNED);
+  assert.equal(wrapSigned(ALL_ONES), -1n);
+  assert.equal(wrapSigned(2n ** 64n), 0n);
+  assert.equal(wrapSigned(-1n), -1n);
 });
 
 test('the unsigned view keeps the raw bit pattern', () => {
-  assert.equal(toUnsigned(-1n, BYTE), 255n);
-  assert.equal(toUnsigned(-1n, DWORD), 4294967295n);
-  assert.equal(toUnsigned(-56n, BYTE), 200n);
-  assert.equal(toUnsigned(5n, BYTE), 5n);
+  assert.equal(toUnsigned(-1n), ALL_ONES);
+  assert.equal(toUnsigned(-2n), ALL_ONES - 1n);
+  assert.equal(toUnsigned(5n), 5n);
+  assert.equal(toUnsigned(MIN_SIGNED), 2n ** 63n);
 });
 
 test('digits are validated against the active base', () => {
@@ -78,51 +77,51 @@ test('digit strings parse per base and reject stray characters', () => {
 });
 
 test('each base is grouped the way Windows groups it', () => {
-  assert.equal(formatInteger(255n, 'hex', QWORD), 'FF');
-  assert.equal(formatInteger(4294967295n, 'hex', QWORD), 'FFFF FFFF');
-  assert.equal(formatInteger(255n, 'bin', QWORD), '1111 1111');
-  assert.equal(formatInteger(255n, 'oct', QWORD), '377');
-  assert.equal(formatInteger(1234567n, 'dec', QWORD), '1,234,567');
-  assert.equal(formatInteger(-1n, 'dec', QWORD), '-1');
-  assert.equal(formatInteger(-1n, 'hex', BYTE), 'FF');
-  assert.equal(formatInteger(-1n, 'bin', BYTE), '1111 1111');
+  assert.equal(formatInteger(255n, 'hex'), 'FF');
+  assert.equal(formatInteger(4294967295n, 'hex'), 'FFFF FFFF');
+  assert.equal(formatInteger(255n, 'bin'), '1111 1111');
+  assert.equal(formatInteger(255n, 'oct'), '377');
+  assert.equal(formatInteger(1234567n, 'dec'), '1,234,567');
+  assert.equal(formatInteger(-1n, 'dec'), '-1');
+  assert.equal(formatInteger(-1n, 'hex'), 'FFFF FFFF FFFF FFFF');
+  assert.equal(formatInteger(-2n, 'bin').endsWith('1110'), true);
 });
 
-test('input length is capped by the bit width', () => {
-  assert.equal(maxDigitsFor('hex', BYTE), 2);
-  assert.equal(maxDigitsFor('bin', BYTE), 8);
-  assert.equal(maxDigitsFor('oct', BYTE), 3);
-  assert.equal(maxDigitsFor('hex', QWORD), 16);
+test('input length is capped at 64 bits', () => {
+  assert.equal(maxDigitsFor('hex'), 16);
+  assert.equal(maxDigitsFor('bin'), 64);
+  assert.equal(maxDigitsFor('oct'), 22);
+  assert.equal(maxDigitsFor('dec'), 20);
 });
 
 test('integer arithmetic truncates and wraps', () => {
-  assert.equal(computeInteger(7n, 'divide', 2n, QWORD), 3n);
-  assert.equal(computeInteger(-7n, 'divide', 2n, QWORD), -3n);
-  assert.equal(computeInteger(7n, 'mod', 2n, QWORD), 1n);
-  assert.equal(computeInteger(200n, 'add', 100n, BYTE), 44n);
-  assert.equal(computeInteger(1000n, 'multiply', 1000n, WORD), 16960n);
-  assert.throws(() => computeInteger(1n, 'divide', 0n, QWORD), /Cannot divide by zero/);
+  assert.equal(computeInteger(7n, 'divide', 2n), 3n);
+  assert.equal(computeInteger(-7n, 'divide', 2n), -3n);
+  assert.equal(computeInteger(7n, 'mod', 2n), 1n);
+  assert.equal(computeInteger(200n, 'add', 100n), 300n);
+  assert.equal(computeInteger(MAX_SIGNED, 'add', 1n), MIN_SIGNED);
+  assert.throws(() => computeInteger(1n, 'divide', 0n), /Cannot divide by zero/);
 });
 
 test('bitwise operators work on the raw bits', () => {
-  assert.equal(computeInteger(0xffn, 'and', 0x0fn, QWORD), 0x0fn);
-  assert.equal(computeInteger(0xf0n, 'or', 0x0fn, QWORD), 0xffn);
-  assert.equal(computeInteger(0xffn, 'xor', 0x0fn, QWORD), 0xf0n);
-  assert.equal(computeInteger(0xffn, 'nand', 0x0fn, BYTE), -16n); // 0xF0
-  assert.equal(toUnsigned(computeInteger(0xf0n, 'nor', 0x0fn, BYTE), BYTE), 0x00n);
-  assert.equal(notInteger(0n, BYTE), -1n);
-  assert.equal(toUnsigned(notInteger(0n, DWORD), DWORD), 4294967295n);
+  assert.equal(computeInteger(0xffn, 'and', 0x0fn), 0x0fn);
+  assert.equal(computeInteger(0xf0n, 'or', 0x0fn), 0xffn);
+  assert.equal(computeInteger(0xffn, 'xor', 0x0fn), 0xf0n);
+  assert.equal(toUnsigned(computeInteger(0xffn, 'nand', 0x0fn)) & 0xffn, 0xf0n);
+  assert.equal(toUnsigned(computeInteger(0xf0n, 'nor', 0x0fn)) & 0xffn, 0x00n);
+  assert.equal(notInteger(0n), -1n);
+  assert.equal(toUnsigned(notInteger(0n)), ALL_ONES);
 });
 
-test('shifts and rotations respect the width', () => {
-  assert.equal(computeInteger(1n, 'lsh', 4n, QWORD), 16n);
-  assert.equal(computeInteger(0xffn, 'lsh', 4n, BYTE), -16n); // 0xF0, top bits fall off
-  assert.equal(computeInteger(16n, 'rsh', 4n, QWORD), 1n);
-  assert.equal(computeInteger(-16n, 'rsh', 2n, QWORD), -4n); // arithmetic shift
-  assert.equal(toUnsigned(computeInteger(0x81n, 'rol', 1n, BYTE), BYTE), 0x03n);
-  assert.equal(toUnsigned(computeInteger(0x81n, 'ror', 1n, BYTE), BYTE), 0xc0n);
-  assert.equal(computeInteger(5n, 'rol', 0n, BYTE), 5n);
-  assert.throws(() => computeInteger(1n, 'lsh', -1n, BYTE), ProgrammerError);
+test('shifts and rotations stay inside 64 bits', () => {
+  assert.equal(computeInteger(1n, 'lsh', 4n), 16n);
+  assert.equal(computeInteger(1n, 'lsh', 63n), MIN_SIGNED); // the sign bit
+  assert.equal(computeInteger(16n, 'rsh', 4n), 1n);
+  assert.equal(computeInteger(-16n, 'rsh', 2n), -4n); // arithmetic shift
+  assert.equal(computeInteger(1n, 'rol', 1n), 2n);
+  assert.equal(computeInteger(1n, 'ror', 1n), MIN_SIGNED); // wraps to the top bit
+  assert.equal(computeInteger(5n, 'rol', 0n), 5n);
+  assert.throws(() => computeInteger(1n, 'lsh', -1n), ProgrammerError);
 });
 
 /* ------------------------------------------------------------------ *
@@ -174,24 +173,10 @@ test('hexadecimal entry reads A to F', () => {
   assert.equal(engine.isActionAvailable(digit('F')), true);
 });
 
-test('entry stops at the selected bit width', () => {
-  const engine = run([{ type: 'number-base', value: 'hex' }, ...digits('FFF')], {
-    bitWidth: 'byte',
-  });
-  assert.equal(engine.displayText(), 'FF');
+test('entry stops at 64 bits', () => {
+  const engine = run([{ type: 'number-base', value: 'hex' }, ...digits('FFFFFFFFFFFFFFFFF')]);
+  assert.equal(engine.displayText(), 'FFFF FFFF FFFF FFFF');
   assert.equal(basesOf(engine).dec, '-1');
-});
-
-test('changing the bit width truncates the value', () => {
-  const engine = run(digits('300'));
-  assert.equal(engine.displayText(), '300');
-  engine.press({ type: 'bit-width', value: 'byte' });
-  assert.equal(engine.displayText(), '44');
-  assert.equal(engine.bitWidth, 'byte');
-
-  const cycled = run(digits('1'));
-  cycled.cycleBitWidth();
-  assert.equal(cycled.bitWidth, 'byte');
 });
 
 test('bitwise keys calculate and show up in the expression', () => {
@@ -202,10 +187,10 @@ test('bitwise keys calculate and show up in the expression', () => {
   const shifted = run([...digits('1'), operator('lsh'), digit('8'), EQUALS]);
   assert.equal(shifted.displayText(), '256');
 
-  const inverted = run([digit('0'), { type: 'unary', value: 'not' }], { bitWidth: 'byte' });
+  const inverted = run([digit('0'), { type: 'unary', value: 'not' }]);
   assert.equal(inverted.displayText(), '-1');
   assert.equal(inverted.expressionText(), 'NOT(0)');
-  assert.equal(basesOf(inverted).hex, 'FF');
+  assert.equal(basesOf(inverted).hex, 'FFFF FFFF FFFF FFFF');
 });
 
 test('division and negation stay integral', () => {
@@ -251,16 +236,13 @@ test('switching in and out of programmer mode truncates once', () => {
   assert.equal(engine.isActionAvailable({ type: 'operator', value: 'and' }), false);
 });
 
-test('base, bit width and mode survive a restore', () => {
-  const engine = run([{ type: 'number-base', value: 'hex' }, ...digits('FF'), operator('or'), digit('F'), EQUALS], {
-    bitWidth: 'word',
-  });
+test('base and mode survive a restore', () => {
+  const engine = run([{ type: 'number-base', value: 'hex' }, ...digits('FF'), operator('or'), digit('F'), EQUALS]);
   assert.equal(engine.displayText(), 'FF');
 
   const restored = CalculatorEngine.restore(JSON.parse(JSON.stringify(engine.toJSON())));
   assert.equal(restored.mode, 'programmer');
   assert.equal(restored.base, 'hex');
-  assert.equal(restored.bitWidth, 'word');
   assert.equal(restored.getState().history[0].expression, 'FF OR F =');
   assert.equal(restored.getState().history[0].result, 'FF');
 });

@@ -391,24 +391,13 @@ html[data-mode="programmer"] .display-value {
  * Programmer mode: the four bases under the display
  * ------------------------------------------------------------------ */
 
-/* Holds the mode extras. In programmer mode the bit width sits beside the
-   four bases instead of on its own row, which buys the tape its height back. */
+/* Holds whatever a mode adds above the keypad: the scientific toolbar or the
+   list of bases. */
 .mode-strip {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--key-gap);
-}
-
-html[data-mode="programmer"] .mode-strip {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-
-html[data-mode="programmer"] .base-list {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .base-list {

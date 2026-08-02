@@ -26,17 +26,6 @@ const digit = (value) => ({
   keys: [value, `Numpad${value}`],
 });
 
-/** The bit width selector above the programmer keypad. */
-export const PROGRAMMER_TOOLBAR_KEYS = [
-  {
-    id: 'bit-width',
-    label: 'QWORD',
-    aria: 'Bit width',
-    action: { type: 'ui-cycle-bit-width' },
-    variant: 'toggle',
-  },
-];
-
 /** DEG/RAD/GRAD, HYP and F-E live above the scientific keypad, as in Windows. */
 export const SCIENTIFIC_TOOLBAR_KEYS = [
   {
@@ -724,7 +713,7 @@ export const LAYOUTS = {
 export const TOOLBAR_KEYS = {
   standard: [],
   scientific: SCIENTIFIC_TOOLBAR_KEYS,
-  programmer: PROGRAMMER_TOOLBAR_KEYS,
+  programmer: [],
 };
 
 /** Resolve the effective face of a key for the current 2nd/HYP state. */
@@ -768,10 +757,6 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'F6', modes: ['programmer'], action: { type: 'number-base', value: 'dec' } },
   { key: 'F7', modes: ['programmer'], action: { type: 'number-base', value: 'oct' } },
   { key: 'F8', modes: ['programmer'], action: { type: 'number-base', value: 'bin' } },
-  { key: 'F2', modes: ['programmer'], action: { type: 'bit-width', value: 'byte' } },
-  { key: 'F3', modes: ['programmer'], action: { type: 'bit-width', value: 'word' } },
-  { key: 'F4', modes: ['programmer'], action: { type: 'bit-width', value: 'dword' } },
-  { key: 'F12', modes: ['programmer'], action: { type: 'bit-width', value: 'qword' } },
 ];
 
 /**
