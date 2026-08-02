@@ -229,6 +229,12 @@ describe('webkit', () => {
       await tapDigits(page, '7');
       await tap(page, 'equals');
       assert.equal(await readDisplay(page), '7');
+
+      // Having finished a calculation, the hint steps aside for the tape.
+      assert.equal(await hint.isVisible(), false);
+      await page.reload();
+      await page.waitForSelector('[data-key="digit-7"]');
+      assert.equal(await page.locator('#install-hint').isVisible(), false);
     });
   });
 

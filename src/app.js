@@ -491,6 +491,9 @@ function dispatch(action) {
       break;
     default:
       engine.press(action);
+      // Once a calculation is finished the hint has done its job, and the row
+      // it occupies is better spent on the tape.
+      if (action.type === 'equals') dismissInstallHint();
       break;
   }
   persist();
@@ -614,10 +617,7 @@ elements.modeMenuButton.addEventListener('click', () => {
   setModeMenuOpen(!ui.modeMenuOpen);
 });
 
-elements.installHintDismiss.addEventListener('click', () => {
-  elements.installHint.hidden = true;
-  storage.set(STORAGE_KEYS.installHint, 'dismissed');
-});
+elements.installHintDismiss.addEventListener('click', dismissInstallHint);
 
 window.addEventListener('keydown', (event) => {
   const target = event.target;
@@ -662,6 +662,12 @@ function isIos() {
     (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
 }
 
+function dismissInstallHint() {
+  if (elements.installHint.hidden) return;
+  elements.installHint.hidden = true;
+  storage.set(STORAGE_KEYS.installHint, 'dismissed');
+}
+
 function setupInstallHint() {
   if (storage.get(STORAGE_KEYS.installHint) === 'dismissed' || isStandalone()) {
     elements.installHint.hidden = true;
@@ -680,8 +686,21 @@ function registerServiceWorker() {
     console.info('Service worker skipped: this origin is not secure.');
     return;
   }
+
+  const { serviceWorker } = window.navigator;
+  // The cache answers first, so a page opened right after a deploy still shows
+  // the previous build. When the new worker takes over, pick it up at once
+  // instead of leaving the app a visit behind.
+  const hadController = Boolean(serviceWorker.controller);
+  let reloading = false;
+  serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
   const url = new URL('../sw.js', import.meta.url);
-  window.navigator.serviceWorker.register(url).catch(() => {
+  serviceWorker.register(url).catch(() => {
     console.info('Service worker registration failed.');
   });
 }
