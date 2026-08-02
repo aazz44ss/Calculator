@@ -57,12 +57,15 @@ async function staleWhileRevalidate(request) {
   if (cached) return cached;
 
   const fresh = await update;
-  if (fresh) return fresh;
+  if (fresh && fresh.ok) return fresh;
 
+  // The network answered, but with an error: a cached shell still beats
+  // showing the CDN's error page.
   if (request.mode === 'navigate') {
     const fallback = await cache.match('./index.html', { ignoreSearch: true });
     if (fallback) return fallback;
   }
+  if (fresh) return fresh;
   return new Response('Offline', { status: 503, statusText: 'Offline' });
 }
 
