@@ -827,6 +827,21 @@ html[data-mode="programmer"] .display-value {
   font-family: var(--font-ui);
 }
 
+/* Describes the page for crawlers and screen readers. The calculator itself
+   fills the viewport, so this sits outside the visual flow rather than being
+   removed with display:none, which would hide it from assistive tech too. */
+.page-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (min-width: 720px) {
   .app {
     grid-template-columns: minmax(0, 1fr) clamp(260px, 28vw, 340px);

@@ -1,13 +1,41 @@
 <!DOCTYPE html>
-<html lang="zh-Hant" data-theme="system" data-mode="standard">
+<html lang="en" data-theme="system" data-mode="standard">
   <head>
     <meta charset="utf-8" />
-    <title>Calculator</title>
+    <title>Calculator — standard, scientific and programmer, works offline</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Windows 11 style calculator that installs to your home screen." />
+    <meta
+      name="description"
+      content="A free online calculator with standard, scientific and programmer keypads. Exact decimal arithmetic, a running history of your calculations, works offline and installs to your home screen."
+    />
+    <link rel="canonical" href="https://aazz44ss.github.io/Calculator/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f3f3f3" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#202020" media="(prefers-color-scheme: dark)" />
+    <!-- Stops iOS turning long results in the history into phone links. -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Link previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Calculator" />
+    <meta property="og:title" content="Calculator — standard, scientific and programmer" />
+    <meta
+      property="og:description"
+      content="Exact decimal arithmetic, a running history of your calculations, three keypads, works offline and installs to your home screen."
+    />
+    <meta property="og:url" content="https://aazz44ss.github.io/Calculator/" />
+    <meta property="og:image" content="https://aazz44ss.github.io/Calculator/icons/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Calculator app icon beside its name" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Calculator — standard, scientific and programmer" />
+    <meta
+      name="twitter:description"
+      content="Exact decimal arithmetic, a running history of your calculations, three keypads, works offline."
+    />
+    <meta name="twitter:image" content="https://aazz44ss.github.io/Calculator/icons/social-card.png" />
 
     <!-- iOS home screen -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,6 +48,31 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles/app.css" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Calculator",
+        "url": "https://aazz44ss.github.io/Calculator/",
+        "description": "A free online calculator with standard, scientific and programmer keypads, exact decimal arithmetic and a running history. Works offline and installs to the home screen.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any device with a modern web browser",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "image": "https://aazz44ss.github.io/Calculator/icons/social-card.png",
+        "featureList": [
+          "Standard, scientific and programmer keypads",
+          "Exact decimal arithmetic, so 0.1 + 0.2 is 0.3",
+          "Running history of recent calculations",
+          "HEX, DEC, OCT and BIN side by side with bitwise operators",
+          "Light, dark and system themes",
+          "Full keyboard support",
+          "Works offline and installs to the home screen"
+        ]
+      }
+    </script>
     <script>
       // Applied before first paint so the shell never flashes the wrong theme.
       try {
@@ -33,6 +86,19 @@
     </script>
   </head>
   <body>
+    <!-- The interface is built by JavaScript, so this describes the page for
+         anything that reads it without running scripts. -->
+    <section class="page-summary">
+      <h1>Calculator</h1>
+      <p>
+        A free online calculator with three keypads: standard, scientific and programmer. It runs
+        on exact decimal arithmetic, so 0.1 + 0.2 really is 0.3, keeps a running history of your
+        recent calculations above the display, shows HEX, DEC, OCT and BIN side by side with the
+        bitwise operators, supports the full keyboard, works offline and installs to the home
+        screen.
+      </p>
+    </section>
+
     <div class="app" id="app">
       <div class="calculator" id="calculator">
         <header class="titlebar">
@@ -48,7 +114,7 @@
             >
               <span aria-hidden="true">☰</span>
             </button>
-            <h1 class="titlebar-title" id="mode-title">Standard</h1>
+            <h2 class="titlebar-title" id="mode-title">Standard</h2>
           </div>
 
           <div class="mode-menu" id="mode-menu" role="menu" aria-label="Calculator mode" hidden>
@@ -151,7 +217,11 @@
     </div>
 
     <noscript>
-      <p class="noscript">This calculator needs JavaScript enabled.</p>
+      <p class="noscript">
+        This calculator needs JavaScript enabled. With it on you get standard, scientific and
+        programmer keypads, exact decimal arithmetic, a history of recent calculations and offline
+        use.
+      </p>
     </noscript>
 
     <script type="module" src="src/app.js"></script>

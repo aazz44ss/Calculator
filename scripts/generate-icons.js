@@ -72,6 +72,24 @@ function artwork(options = {}) {
 `;
 }
 
+/** 1200×630 card used by og:image and twitter:image. */
+function socialCard() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="${BACKGROUND_START}"/>
+    <stop offset="1" stop-color="${BACKGROUND_END}"/>
+  </linearGradient></defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(80 123) scale(0.75)">${glyph()}</g>
+  <g fill="${KEY_FILL}" font-family="Segoe UI, DejaVu Sans, Helvetica, Arial, sans-serif">
+    <text x="520" y="285" font-size="88" font-weight="700">Calculator</text>
+    <text x="520" y="345" font-size="34" opacity="0.88">Standard · Scientific · Programmer</text>
+    <text x="520" y="400" font-size="28" opacity="0.72">Exact decimals, live history, works offline</text>
+  </g>
+</svg>
+`;
+}
+
 const TARGETS = [
   { file: 'icon-192.png', size: 192, svg: artwork(), flattenTo: null },
   { file: 'icon-512.png', size: 512, svg: artwork(), flattenTo: null },
@@ -104,6 +122,10 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+
+  const cardPath = join(iconsDir, 'social-card.png');
+  await sharp(Buffer.from(socialCard())).png({ compressionLevel: 9 }).toFile(cardPath);
+  console.log(`wrote ${cardPath} (1200×630)`);
 
   for (const target of TARGETS) {
     let pipeline = sharp(Buffer.from(target.svg)).resize(target.size, target.size);
