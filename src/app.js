@@ -383,6 +383,23 @@ function setModeMenuOpen(open) {
   elements.modeMenuButton.setAttribute('aria-expanded', String(open));
 }
 
+const MIN_TAPE_HEIGHT = 22;
+
+/**
+ * A keypad with many rows can leave the tape without usable height. Entries
+ * would then be clipped out of sight while still sitting in the DOM, so hide
+ * the whole strip rather than leave targets nobody can reach.
+ */
+function updateTapeVisibility() {
+  const collapsed = elements.tape.clientHeight < MIN_TAPE_HEIGHT;
+  elements.tape.classList.toggle('is-collapsed', collapsed);
+  elements.tape.setAttribute('aria-hidden', String(collapsed));
+}
+
+if (typeof ResizeObserver === 'function') {
+  new ResizeObserver(updateTapeVisibility).observe(elements.tape);
+}
+
 /** The at-a-glance list of finished calculations above the display. */
 function renderTape(state) {
   const signature = state.history.map((entry) => entry.id).join('|');
@@ -407,6 +424,7 @@ function renderTape(state) {
     return item;
   });
   elements.tape.replaceChildren(...items);
+  updateTapeVisibility();
 }
 
 function renderTheme() {

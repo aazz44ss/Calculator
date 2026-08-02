@@ -508,6 +508,25 @@ describe('webkit', () => {
       await page.tap('.tape-button >> nth=2');
       assert.equal(await readDisplay(page), '144');
       assert.equal(await readExpression(page), '12 × 12 =');
+
+      // A taller keypad may leave the tape no room; it must then hide itself
+      // instead of leaving entries that are clipped out of sight but tappable.
+      for (const mode of ['scientific', 'programmer', 'standard']) {
+        await switchMode(page, mode);
+        const reachable = await page.evaluate(() => {
+          const tape = document.getElementById('tape');
+          if (tape.classList.contains('is-collapsed')) return 'hidden';
+          const button = document.querySelector('.tape-button');
+          if (!button) return 'empty';
+          const rect = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return button.contains(hit) ? 'reachable' : 'blocked';
+        });
+        assert.notEqual(reachable, 'blocked', `tape entries are unreachable in ${mode} mode`);
+      }
     });
   });
 

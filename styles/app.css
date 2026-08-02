@@ -258,6 +258,11 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
 }
 
+/* Keeps its box so the layout does not jump, but stops being a tap target. */
+.tape.is-collapsed {
+  visibility: hidden;
+}
+
 .tape-item {
   flex: 0 0 auto;
 }
