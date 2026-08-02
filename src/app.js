@@ -153,13 +153,10 @@ function updateKeyAvailability() {
 
 function renderToolbar() {
   const keys = currentToolbarKeys();
-  if (keys.length === 0) {
-    elements.toolbar.hidden = true;
-    elements.toolbar.replaceChildren();
-    return;
-  }
 
-  elements.toolbar.hidden = false;
+  // Rebuild whenever the mode changes, including into a mode without a
+  // toolbar; leaving the marker behind used to make the scientific chips
+  // disappear for good after a visit to another keypad.
   if (elements.toolbar.dataset.mode !== engine.mode) {
     elements.toolbar.dataset.mode = engine.mode;
     const fragment = document.createDocumentFragment();
@@ -174,6 +171,7 @@ function renderToolbar() {
     }
     elements.toolbar.replaceChildren(fragment);
   }
+  elements.toolbar.hidden = keys.length === 0;
 
   for (const button of elements.toolbar.querySelectorAll('[data-key]')) {
     if (button.dataset.key === 'angle-unit') {

@@ -522,6 +522,20 @@ describe('webkit', () => {
           return button.contains(hit) ? 'reachable' : 'blocked';
         });
         assert.equal(reachable, 'reachable', `the tape is not usable in ${mode} mode`);
+
+        // Each keypad brings its own extras back, however you got there.
+        const toolbar = await page.evaluate(() =>
+          [...document.getElementById('toolbar').querySelectorAll('[data-key]')].map(
+            (button) => button.dataset.key,
+          ),
+        );
+        const expected = mode === 'scientific' ? ['angle-unit', 'toggle-hyp', 'toggle-fe'] : [];
+        assert.deepEqual(toolbar, expected, `wrong toolbar in ${mode} mode`);
+        assert.equal(
+          await page.locator('#base-list').isVisible(),
+          mode === 'programmer',
+          `wrong base list visibility in ${mode} mode`,
+        );
       }
     });
   });
