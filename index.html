@@ -83,6 +83,15 @@
           >
             Scientific
           </button>
+          <button
+            type="button"
+            role="tab"
+            class="mode-tab"
+            data-mode-button="programmer"
+            aria-selected="false"
+          >
+            Programmer
+          </button>
         </div>
 
         <section class="display" id="display-area" aria-label="Display">
@@ -94,6 +103,7 @@
           <output class="display-value" id="display" aria-live="polite">0</output>
         </section>
 
+        <ul class="base-list" id="base-list" aria-label="Number bases" hidden></ul>
         <div class="toolbar" id="toolbar" hidden></div>
         <div class="memory-row" id="memory-row"></div>
 

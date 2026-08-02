@@ -27,6 +27,7 @@ const SHELL_PATHS = [
   '/src/engine.js',
   '/src/format.js',
   '/src/layout.js',
+  '/src/programmer.js',
   '/icons/favicon.svg',
   '/icons/apple-touch-icon.png',
   '/icons/icon-192.png',
@@ -364,6 +365,60 @@ describe('webkit', () => {
       await page.keyboard.type('5');
       await page.keyboard.press('s');
       assert.equal(await readExpression(page), 'sin(5)');
+    });
+  });
+
+  test('programmer mode shows every base and works on bits', { timeout: TIMEOUT }, async () => {
+    await withApp(browser, { width: 414, height: 896 }, async (page) => {
+      await page.tap('[data-mode-button="programmer"]');
+      const keypad = page.locator('#keypad');
+      assert.equal(await keypad.getAttribute('data-columns'), '5');
+      assert.equal(await keypad.getAttribute('data-rows'), '8');
+      assert.equal(await page.locator(keySelector('bit-width')).textContent(), 'QWORD');
+
+      await tapDigits(page, '255');
+      const bases = await page.evaluate(() =>
+        Object.fromEntries(
+          [...document.querySelectorAll('.base-row')].map((row) => [
+            row.dataset.base,
+            row.lastChild.textContent,
+          ]),
+        ),
+      );
+      assert.deepEqual(bases, { hex: 'FF', dec: '255', oct: '377', bin: '1111 1111' });
+
+      // A-F only light up once the active base is hexadecimal.
+      assert.equal(await page.locator(keySelector('digit-A')).isDisabled(), true);
+      assert.equal(await page.locator(keySelector('decimal')).isDisabled(), true);
+      await page.tap('[data-base="hex"]');
+      assert.equal(await readDisplay(page), 'FF');
+      assert.equal(await page.locator(keySelector('digit-A')).isDisabled(), false);
+      assert.equal(
+        await page.locator('[data-base="hex"]').getAttribute('aria-pressed'),
+        'true',
+      );
+
+      await tap(page, 'and');
+      await tap(page, 'digit-F');
+      await tap(page, 'equals');
+      assert.equal(await readDisplay(page), 'F');
+      assert.equal(await readExpression(page), 'FF AND F =');
+
+      // Narrowing the width makes NOT 0 wrap to a single byte.
+      await tap(page, 'clear', 'bit-width');
+      assert.equal(await page.locator(keySelector('bit-width')).textContent(), 'BYTE');
+      await tap(page, 'digit-0', 'not');
+      assert.equal(await readDisplay(page), 'FF');
+      const decimalRow = await page.textContent('[data-base="dec"]');
+      assert.match(decimalRow, /-1/);
+
+      // Keyboard: F8 selects BIN, and hex letters type digits.
+      await page.keyboard.press('F8');
+      assert.equal(await readDisplay(page), '1111 1111');
+      assert.equal(
+        await page.locator('[data-base="bin"]').getAttribute('aria-pressed'),
+        'true',
+      );
     });
   });
 

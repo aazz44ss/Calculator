@@ -35,6 +35,21 @@ import {
   tanh,
 } from './decimal.js';
 import { OPERATOR_SYMBOLS, formatEntry, formatExpression, formatValue } from './format.js';
+import {
+  BIT_WIDTHS,
+  DEFAULT_BASE,
+  DEFAULT_BIT_WIDTH,
+  NUMBER_BASES,
+  ProgrammerError,
+  bitsForWidth,
+  computeInteger,
+  formatInteger,
+  isDigitInBase,
+  maskFor,
+  notInteger,
+  parseDigits,
+  wrapSigned,
+} from './programmer.js';
 
 const MAX_ENTRY_DIGITS = 16;
 const MAX_RESULT_DIGITS = 10000;
@@ -46,19 +61,83 @@ export const ERRORS = {
   OVERFLOW: 'Overflow',
 };
 
-/** Actions that only exist in scientific mode. */
-const SCIENTIFIC_ONLY_TYPES = new Set([
-  'paren-open',
-  'paren-close',
-  'exponent',
-  'constant',
-  'toggle-second',
-  'toggle-hyp',
-  'toggle-fe',
-  'angle-unit',
-]);
-const SCIENTIFIC_ONLY_OPERATORS = new Set(['power', 'root', 'mod']);
+export const MODES = ['standard', 'scientific', 'programmer'];
+
+/** Which action types each keypad understands. */
+const TYPES_BY_MODE = {
+  standard: new Set([
+    'digit',
+    'decimal',
+    'operator',
+    'unary',
+    'negate',
+    'percent',
+    'equals',
+    'clear',
+    'clear-entry',
+    'backspace',
+  ]),
+  scientific: new Set([
+    'digit',
+    'decimal',
+    'exponent',
+    'operator',
+    'unary',
+    'negate',
+    'percent',
+    'equals',
+    'clear',
+    'clear-entry',
+    'backspace',
+    'paren-open',
+    'paren-close',
+    'constant',
+    'toggle-second',
+    'toggle-hyp',
+    'toggle-fe',
+    'angle-unit',
+  ]),
+  programmer: new Set([
+    'digit',
+    'operator',
+    'unary',
+    'negate',
+    'percent',
+    'equals',
+    'clear',
+    'clear-entry',
+    'backspace',
+    'paren-open',
+    'paren-close',
+    'number-base',
+    'bit-width',
+  ]),
+};
+
+/** Which binary operators each keypad offers. */
+const OPERATORS_BY_MODE = {
+  standard: new Set(['add', 'subtract', 'multiply', 'divide']),
+  scientific: new Set(['add', 'subtract', 'multiply', 'divide', 'power', 'root', 'mod']),
+  programmer: new Set([
+    'add',
+    'subtract',
+    'multiply',
+    'divide',
+    'mod',
+    'and',
+    'or',
+    'xor',
+    'nand',
+    'nor',
+    'lsh',
+    'rsh',
+    'rol',
+    'ror',
+  ]),
+};
+
 const STANDARD_UNARY_FUNCTIONS = new Set(['sqr', 'sqrt', 'reciprocal']);
+const PROGRAMMER_UNARY_FUNCTIONS = new Set(['not']);
 
 /** Actions still accepted while an error is displayed. */
 const ERROR_SAFE_TYPES = new Set([
@@ -70,11 +149,14 @@ const ERROR_SAFE_TYPES = new Set([
   'toggle-second',
   'toggle-hyp',
   'toggle-fe',
+  'number-base',
+  'bit-width',
   'memory-clear',
   'history-clear',
 ]);
 
 const UNARY_TOKENS = {
+  not: (operand) => `NOT(${operand})`,
   sqr: (operand) => `sqr(${operand})`,
   cube: (operand) => `cube(${operand})`,
   sqrt: (operand) => `√(${operand})`,
@@ -103,6 +185,8 @@ const UNARY_TOKENS = {
 };
 
 const UNARY_FUNCTIONS = {
+  // `not` is handled by the programmer path, listed here so the key resolves.
+  not: (value) => value,
   sqr: (value) => value.multiply(value),
   cube: (value) => value.multiply(value).multiply(value),
   sqrt: (value) => value.sqrt(),
@@ -154,8 +238,12 @@ function nextId(prefix) {
 
 export class CalculatorEngine {
   constructor(options = {}) {
-    this.mode = options.mode === 'scientific' ? 'scientific' : 'standard';
+    this.mode = MODES.includes(options.mode) ? options.mode : 'standard';
     this.angleUnit = ANGLE_UNITS.includes(options.angleUnit) ? options.angleUnit : 'deg';
+    this.base = NUMBER_BASES.some((item) => item.id === options.base) ? options.base : DEFAULT_BASE;
+    this.bitWidth = BIT_WIDTHS.some((item) => item.id === options.bitWidth)
+      ? options.bitWidth
+      : DEFAULT_BIT_WIDTH;
     this.second = Boolean(options.second);
     this.hyp = Boolean(options.hyp);
     this.fe = Boolean(options.fe);
@@ -187,18 +275,47 @@ export class CalculatorEngine {
    * Derived values
    * ---------------------------------------------------------------- */
 
+  get isProgrammer() {
+    return this.mode === 'programmer';
+  }
+
+  get bits() {
+    return bitsForWidth(this.bitWidth);
+  }
+
+  /** The current value as a BigInt, only meaningful in programmer mode. */
+  toBigInt(value = this.currentValue()) {
+    return wrapSigned(BigInt(value.truncateTo(0).toString()), this.bits);
+  }
+
+  fromBigInt(value) {
+    return Decimal.fromString(wrapSigned(value, this.bits).toString());
+  }
+
+  /** Render a value the way the current mode displays numbers. */
+  format(value) {
+    if (this.isProgrammer) {
+      return formatInteger(BigInt(value.truncateTo(0).toString()), this.base, this.bits);
+    }
+    return formatValue(value, { fe: this.fe });
+  }
+
   currentValue() {
-    return this.entry === null ? this.value : entryToDecimal(this.entry);
+    if (this.entry === null) return this.value;
+    if (this.isProgrammer) return this.fromBigInt(parseDigits(this.entry, this.base));
+    return entryToDecimal(this.entry);
   }
 
   currentOperandToken() {
     if (this.operandExpression !== null) return this.operandExpression;
+    if (this.isProgrammer) return this.format(this.currentValue());
     if (this.entry !== null) return formatEntry(this.entry);
     return formatValue(this.value, { fe: this.fe });
   }
 
   displayText() {
     if (this.error) return this.error;
+    if (this.isProgrammer) return this.format(this.currentValue());
     if (this.entry !== null) return formatEntry(this.entry);
     return formatValue(this.value, { fe: this.fe });
   }
@@ -225,12 +342,23 @@ export class CalculatorEngine {
   }
 
   getState() {
+    const value = this.currentValue();
     return {
       display: this.displayText(),
       expression: this.expressionText(),
       isError: Boolean(this.error),
       mode: this.mode,
       angleUnit: this.angleUnit,
+      base: this.base,
+      bitWidth: this.bitWidth,
+      bases: NUMBER_BASES.map((item) => ({
+        id: item.id,
+        label: item.label,
+        active: item.id === this.base,
+        text: this.error
+          ? '0'
+          : formatInteger(BigInt(value.truncateTo(0).toString()), item.id, this.bits),
+      })),
       second: this.second,
       hyp: this.hyp,
       fe: this.fe,
@@ -238,12 +366,12 @@ export class CalculatorEngine {
       hasMemory: this.memory.length > 0,
       memory: this.memory.map((item, index) => ({
         index,
-        text: formatValue(item, { fe: this.fe }),
+        text: this.format(item),
       })),
       history: this.history.map((item) => ({
         id: item.id,
         expression: item.expression,
-        result: formatValue(item.result, { fe: this.fe }),
+        result: this.format(item.result),
       })),
     };
   }
@@ -252,6 +380,8 @@ export class CalculatorEngine {
     return {
       mode: this.mode,
       angleUnit: this.angleUnit,
+      base: this.base,
+      bitWidth: this.bitWidth,
       second: this.second,
       hyp: this.hyp,
       fe: this.fe,
@@ -355,6 +485,12 @@ export class CalculatorEngine {
       case 'angle-unit':
         this.setAngleUnit(String(value));
         break;
+      case 'number-base':
+        this.setBase(String(value));
+        break;
+      case 'bit-width':
+        this.setBitWidth(String(value));
+        break;
       case 'toggle-second':
         this.second = !this.second;
         break;
@@ -371,13 +507,38 @@ export class CalculatorEngine {
   }
 
   isActionAllowed(action) {
-    const { type, value } = action;
-    if (this.error && !ERROR_SAFE_TYPES.has(type)) return false;
-    if (this.mode === 'scientific') return true;
+    if (this.error && !ERROR_SAFE_TYPES.has(action.type)) return false;
+    return this.isActionAvailable(action);
+  }
 
-    if (SCIENTIFIC_ONLY_TYPES.has(type)) return false;
-    if (type === 'operator' && SCIENTIFIC_ONLY_OPERATORS.has(String(value))) return false;
-    if (type === 'unary' && !STANDARD_UNARY_FUNCTIONS.has(String(value))) return false;
+  /**
+   * Whether the current keypad offers this action at all, ignoring any error
+   * state. The renderer uses it to grey keys out, for example A-F while the
+   * active base is decimal.
+   */
+  isActionAvailable(action) {
+    const { type, value } = action;
+    const types = TYPES_BY_MODE[this.mode];
+    if (!types) return true;
+
+    // Memory, history and mode switching work everywhere.
+    if (!types.has(type)) {
+      return (
+        type.startsWith('memory-') ||
+        type.startsWith('history-') ||
+        type === 'mode' ||
+        type.startsWith('ui-')
+      );
+    }
+
+    if (type === 'operator') return OPERATORS_BY_MODE[this.mode].has(String(value));
+    if (type === 'unary') {
+      if (this.mode === 'programmer') return PROGRAMMER_UNARY_FUNCTIONS.has(String(value));
+      if (this.mode === 'standard') return STANDARD_UNARY_FUNCTIONS.has(String(value));
+      return !PROGRAMMER_UNARY_FUNCTIONS.has(String(value));
+    }
+    if (type === 'digit' && this.isProgrammer) return isDigitInBase(value, this.base);
+    if (type === 'digit') return /^[0-9]$/.test(String(value));
     return true;
   }
 
@@ -395,6 +556,10 @@ export class CalculatorEngine {
   }
 
   inputDigit(digit) {
+    if (this.isProgrammer) {
+      this.inputProgrammerDigit(String(digit).toUpperCase());
+      return;
+    }
     if (!/^[0-9]$/.test(digit)) return;
     this.startNewCalculationIfSettled();
     this.operandExpression = null;
@@ -418,6 +583,18 @@ export class CalculatorEngine {
     if (this.entry === '0') this.entry = digit;
     else if (this.entry === '-0') this.entry = `-${digit}`;
     else this.entry += digit;
+    this.hasFreshOperand = true;
+  }
+
+  inputProgrammerDigit(digit) {
+    if (!isDigitInBase(digit, this.base)) return;
+    this.startNewCalculationIfSettled();
+    this.operandExpression = null;
+
+    const next = this.entry === null || this.entry === '0' ? digit : this.entry + digit;
+    // Refuse a keystroke that would not fit the selected bit width.
+    if (parseDigits(next, this.base) > maskFor(this.bits)) return;
+    this.entry = next;
     this.hasFreshOperand = true;
   }
 
@@ -454,6 +631,15 @@ export class CalculatorEngine {
   }
 
   negate() {
+    if (this.isProgrammer) {
+      const negated = this.fromBigInt(-this.toBigInt());
+      this.entry = null;
+      this.value = negated;
+      this.operandExpression = null;
+      this.settledExpression = null;
+      this.hasFreshOperand = true;
+      return;
+    }
     if (this.entry !== null) {
       const [mantissa, exponent] = this.entry.split(/e/i);
       if (exponent !== undefined) {
@@ -480,6 +666,16 @@ export class CalculatorEngine {
    * ---------------------------------------------------------------- */
 
   compute(left, operator, right) {
+    if (this.isProgrammer) {
+      try {
+        return this.fromBigInt(
+          computeInteger(this.toBigInt(left), operator, this.toBigInt(right), this.bits),
+        );
+      } catch (error) {
+        if (error instanceof ProgrammerError) throw new DecimalError(error.message);
+        throw error;
+      }
+    }
     switch (operator) {
       case 'add':
         return left.add(right);
@@ -568,7 +764,9 @@ export class CalculatorEngine {
     this.runGuarded(() => {
       const value = this.currentValue();
       const token = this.currentOperandToken();
-      const result = this.guardResult(fn(value, this.angleUnit));
+      const result = this.isProgrammer
+        ? this.fromBigInt(notInteger(this.toBigInt(value), this.bits))
+        : this.guardResult(fn(value, this.angleUnit));
       this.value = result;
       this.entry = null;
       this.operandExpression = (UNARY_TOKENS[name] ?? ((operand) => `${name}(${operand})`))(token);
@@ -581,12 +779,13 @@ export class CalculatorEngine {
     this.runGuarded(() => {
       const value = this.currentValue();
       const relative = this.pendingOperator === 'add' || this.pendingOperator === 'subtract';
-      const result = relative && this.accumulator
+      const share = relative && this.accumulator
         ? this.accumulator.multiply(value).divide(Decimal.HUNDRED)
         : value.divide(Decimal.HUNDRED);
+      const result = this.isProgrammer ? this.fromBigInt(this.toBigInt(share)) : share;
       this.value = result;
       this.entry = null;
-      this.operandExpression = formatValue(result, { fe: this.fe });
+      this.operandExpression = this.format(result);
       this.settledExpression = null;
       this.hasFreshOperand = true;
     });
@@ -608,7 +807,7 @@ export class CalculatorEngine {
       } else if (this.lastOperation) {
         const { operator, operand } = this.lastOperation;
         result = this.guardResult(this.compute(value, operator, operand));
-        parts = [token, OPERATOR_SYMBOLS[operator], formatValue(operand, { fe: this.fe }), '='];
+        parts = [token, OPERATOR_SYMBOLS[operator], this.format(operand), '='];
       } else {
         result = value;
         parts = [token, '='];
@@ -801,19 +1000,45 @@ export class CalculatorEngine {
    * ---------------------------------------------------------------- */
 
   setMode(mode) {
-    const next = mode === 'scientific' ? 'scientific' : 'standard';
+    const next = MODES.includes(mode) ? mode : 'standard';
     if (next === this.mode) return this;
-    this.mode = next;
     // The pending chain would reference keys the new keypad may not have.
     const value = this.currentValue();
+    this.mode = next;
     this.reset();
-    this.value = value;
-    if (next === 'standard') {
+    this.value = next === 'programmer' ? this.fromBigInt(this.toBigInt(value)) : value;
+    if (next !== 'scientific') {
       this.second = false;
       this.hyp = false;
       this.fe = false;
     }
     return this;
+  }
+
+  setBase(base) {
+    const target = NUMBER_BASES.find((item) => item.id === base);
+    if (!target) return this;
+    // A number being typed stays editable, it is just re-spelled in the new base.
+    if (this.entry !== null) {
+      const digits = parseDigits(this.entry, this.base);
+      this.entry = digits.toString(Number(target.radix)).toUpperCase();
+    }
+    this.base = base;
+    return this;
+  }
+
+  setBitWidth(width) {
+    if (!BIT_WIDTHS.some((item) => item.id === width)) return this;
+    const value = this.currentValue();
+    this.entry = null;
+    this.bitWidth = width;
+    this.value = this.fromBigInt(BigInt(value.truncateTo(0).toString()));
+    return this;
+  }
+
+  cycleBitWidth() {
+    const index = BIT_WIDTHS.findIndex((item) => item.id === this.bitWidth);
+    return this.setBitWidth(BIT_WIDTHS[(index + 1) % BIT_WIDTHS.length].id);
   }
 
   setAngleUnit(unit) {

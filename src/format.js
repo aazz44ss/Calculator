@@ -13,6 +13,15 @@ export const OPERATOR_SYMBOLS = {
   power: '^',
   root: 'ʸ√',
   mod: 'mod',
+  and: 'AND',
+  or: 'OR',
+  xor: 'XOR',
+  nand: 'NAND',
+  nor: 'NOR',
+  lsh: '<<',
+  rsh: '>>',
+  rol: 'RoL',
+  ror: 'RoR',
 };
 
 export function groupDigits(integerDigits) {

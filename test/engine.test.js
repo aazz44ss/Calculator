@@ -361,11 +361,19 @@ test('keyboard memory, panel and scientific bindings are separated by modifier a
   assert.deepEqual(lookup({ key: 'l', ctrlKey: true }).action, { type: 'memory-clear' });
   assert.deepEqual(lookup({ key: 'h' }).action, { type: 'ui-toggle-history' });
   assert.deepEqual(lookup({ key: '2', altKey: true }).action, { type: 'mode', value: 'scientific' });
-  assert.deepEqual(lookup({ key: 'F4' }).action, { type: 'angle-unit', value: 'rad' });
+  assert.deepEqual(lookup({ key: '3', altKey: true }).action, { type: 'mode', value: 'programmer' });
 
   // Trigonometry and brackets only exist on the scientific keypad.
   assert.equal(lookup({ key: 's' }), null);
   assert.equal(lookup({ key: '(' }), null);
+  assert.equal(lookup({ key: 'F4' }), null);
   assert.deepEqual(lookup({ key: 's' }, 'scientific').action, { type: 'unary', value: 'sin' });
   assert.deepEqual(lookup({ key: '(' }, 'scientific').action, { type: 'paren-open' });
+
+  // The same function keys mean different things per keypad, as on Windows.
+  assert.deepEqual(lookup({ key: 'F4' }, 'scientific').action, { type: 'angle-unit', value: 'rad' });
+  assert.deepEqual(lookup({ key: 'F4' }, 'programmer').action, { type: 'bit-width', value: 'dword' });
+  assert.deepEqual(lookup({ key: 'F5' }, 'programmer').action, { type: 'number-base', value: 'hex' });
+  assert.deepEqual(lookup({ key: 'd' }, 'programmer').action, { type: 'digit', value: 'D' });
+  assert.deepEqual(lookup({ key: '&' }, 'programmer').action, { type: 'operator', value: 'and' });
 });

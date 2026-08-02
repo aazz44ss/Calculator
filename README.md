@@ -9,6 +9,9 @@ working offline.
 - **Standard mode** — 4 × 6 keypad, same key placement as Windows 11.
 - **Scientific mode** — 5 × 8 keypad with 2nd / HYP, DEG-RAD-GRAD, F-E and
   stacked brackets.
+- **Programmer mode** — 5 × 8 keypad with HEX/DEC/OCT/BIN shown side by side,
+  BYTE to QWORD widths, two's complement, AND/OR/XOR/NOT/NAND/NOR, shifts and
+  rotations.
 - **Exact decimals** — `0.1 + 0.2` shows `0.3` and `0.07 × 100` is `7`, because
   arithmetic runs on a BigInt fixed-point decimal rather than on doubles.
 - **History and memory** — a bottom drawer on phones, a side rail from 720px up.
@@ -67,6 +70,7 @@ styles/app.css            Fluent-flavoured styling, theme tokens, responsive rul
 manifest.webmanifest      PWA manifest
 sw.js                     precaches the shell, stale-while-revalidate afterwards
 src/decimal.js            BigInt fixed-point decimal + angle aware maths
+src/programmer.js         BigInt integer maths: bit widths, bases, bitwise ops
 src/format.js             display strings: 16 significant digits, grouping, F-E
 src/engine.js             pure calculator state machine, never touches the DOM
 src/layout.js             keypads and keyboard bindings as data
@@ -75,6 +79,8 @@ scripts/serve.js          zero-dependency dev server (LAN URL + QR code)
 scripts/generate-icons.js draws the icon and rasterises the PNG variants
 test/decimal.test.js      decimal arithmetic and formatting
 test/engine.test.js       state machine behaviour
+test/programmer.test.js   bit widths, bases and the programmer keypad
+test/shell.test.js        keeps sw.js precaching every module the page loads
 test/browser.test.js      WebKit end-to-end suite + a Chromium offline check
 ```
 
@@ -97,6 +103,13 @@ division by 100). After `=` the expression line keeps showing `12 × 12 =` until
 a new calculation starts, which is what the engine's `settledExpression` field
 is for.
 
+`src/programmer.js` does the same job for programmer mode, on plain BigInts
+read as two's complement numbers of the chosen width. That is why `NOT 0` is
+`-1` in DEC and `FFFF FFFF FFFF FFFF` in HEX at the same time, why `200` becomes
+`-56` when you switch to BYTE, and why division truncates instead of rounding.
+The keypad greys out whatever the active base cannot accept, so `A`-`F` only
+light up in HEX and `8`/`9` go dark in OCT.
+
 `src/layout.js` holds every key as data — label, accessible name, engine action,
 2nd/HYP variants and keyboard bindings — and both the renderer and the keyboard
 handler read from it, so a key cannot behave differently depending on how it was
@@ -116,24 +129,39 @@ while standard mode is active.
 | `Ctrl+M` | MS | `Ctrl+P` | M+ |
 | `Ctrl+Q` | M− | `Ctrl+R` | MR |
 | `Ctrl+L` | MC | `H` | history panel |
-| `Alt+1` / `Alt+2` | standard / scientific | `F3` `F4` `F5` | DEG / RAD / GRAD |
+| `Alt+1` `Alt+2` `Alt+3` | standard / scientific / programmer | | |
+
+Scientific keypad only:
+
+| Key | Action | Key | Action |
+| --- | --- | --- | --- |
 | `S` `O` `T` | sin / cos / tan | `N` `L` `G` | ln / log / 10ˣ |
 | `Y` `^` | xʸ | `X` | exp |
 | `(` `)` | brackets | `P` `E` | π / e |
 | `I` | 2nd | `V` | F-E |
+| `F3` `F4` `F5` | DEG / RAD / GRAD | | |
 
-Scientific-only shortcuts do nothing while the standard keypad is shown.
+Programmer keypad only:
+
+| Key | Action | Key | Action |
+| --- | --- | --- | --- |
+| `A`–`F` | hex digits | `&` `\|` `^` `~` | AND / OR / XOR / NOT |
+| `<` `>` | shift left / right | `M` | mod |
+| `F5`–`F8` | HEX / DEC / OCT / BIN | `F2` `F3` `F4` `F12` | BYTE / WORD / DWORD / QWORD |
+
+Shortcuts belonging to another keypad do nothing, which is why `F3` can mean
+RAD in scientific mode and WORD in programmer mode.
 
 ## Tests
 
 ```bash
-npm test        # 65 unit tests: decimal arithmetic, formatting, state machine
-npm run test:e2e  # 19 WebKit end-to-end tests + 1 Chromium offline test
+npm test          # 88 unit tests: decimals, formatting, state machine, bases
+npm run test:e2e  # 20 WebKit end-to-end tests + 1 Chromium offline test
 ```
 
 The end-to-end suite drives the real dev server through Playwright and covers
 six viewport widths from 320px to 1280px (no horizontal overflow, keys keep
-their aspect ratio), touch and keyboard input, mode switching, persistence
+their aspect ratio), touch and keyboard input, all three modes, persistence
 across reloads, the manifest and iOS meta tags, service worker precaching and an
 offline reload. It also asserts that the console stays free of errors.
 

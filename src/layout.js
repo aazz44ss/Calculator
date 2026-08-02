@@ -74,6 +74,17 @@ export const MEMORY_KEYS = [
   },
 ];
 
+/** The bit width selector above the programmer keypad. */
+export const PROGRAMMER_TOOLBAR_KEYS = [
+  {
+    id: 'bit-width',
+    label: 'QWORD',
+    aria: 'Bit width',
+    action: { type: 'ui-cycle-bit-width' },
+    variant: 'toggle',
+  },
+];
+
 /** DEG/RAD/GRAD, HYP and F-E live above the scientific keypad, as in Windows. */
 export const SCIENTIFIC_TOOLBAR_KEYS = [
   {
@@ -518,12 +529,251 @@ export const SCIENTIFIC_LAYOUT = {
   ],
 };
 
+const hexDigit = (value) => ({
+  id: `digit-${value}`,
+  label: value,
+  aria: `Hexadecimal ${value}`,
+  action: { type: 'digit', value },
+  variant: 'function',
+  keys: [value, value.toLowerCase()],
+});
+
+/**
+ * Programmer keypad. Rows 3 to 8 are the Windows block (A-F down the left,
+ * << and >> on the top row); the two rows above hold what Windows keeps behind
+ * its Bitwise and Bit Shift dropdowns.
+ */
+export const PROGRAMMER_LAYOUT = {
+  id: 'programmer',
+  name: 'Programmer',
+  columns: 5,
+  rows: 8,
+  keys: [
+    {
+      id: 'and',
+      label: 'AND',
+      aria: 'Bitwise and',
+      action: { type: 'operator', value: 'and' },
+      variant: 'operator',
+      keys: ['&'],
+    },
+    {
+      id: 'or',
+      label: 'OR',
+      aria: 'Bitwise or',
+      action: { type: 'operator', value: 'or' },
+      variant: 'operator',
+      keys: ['|'],
+    },
+    {
+      id: 'xor',
+      label: 'XOR',
+      aria: 'Bitwise exclusive or',
+      action: { type: 'operator', value: 'xor' },
+      variant: 'operator',
+      keys: ['^'],
+    },
+    {
+      id: 'not',
+      label: 'NOT',
+      aria: 'Bitwise not',
+      action: { type: 'unary', value: 'not' },
+      variant: 'operator',
+      keys: ['~'],
+    },
+    {
+      id: 'nand',
+      label: 'NAND',
+      aria: 'Bitwise nand',
+      action: { type: 'operator', value: 'nand' },
+      variant: 'operator',
+    },
+
+    {
+      id: 'rol',
+      label: 'RoL',
+      aria: 'Rotate left',
+      action: { type: 'operator', value: 'rol' },
+      variant: 'operator',
+    },
+    {
+      id: 'ror',
+      label: 'RoR',
+      aria: 'Rotate right',
+      action: { type: 'operator', value: 'ror' },
+      variant: 'operator',
+    },
+    {
+      id: 'nor',
+      label: 'NOR',
+      aria: 'Bitwise nor',
+      action: { type: 'operator', value: 'nor' },
+      variant: 'operator',
+    },
+    {
+      id: 'mod',
+      label: 'mod',
+      aria: 'Modulo',
+      action: { type: 'operator', value: 'mod' },
+      variant: 'operator',
+      keys: ['m', 'M'],
+    },
+    {
+      id: 'clear',
+      label: 'C',
+      aria: 'Clear all',
+      action: { type: 'clear' },
+      variant: 'function',
+      keys: ['Escape'],
+    },
+
+    hexDigit('A'),
+    {
+      id: 'lsh',
+      label: '<<',
+      aria: 'Shift left',
+      action: { type: 'operator', value: 'lsh' },
+      variant: 'operator',
+      keys: ['<'],
+    },
+    {
+      id: 'rsh',
+      label: '>>',
+      aria: 'Shift right',
+      action: { type: 'operator', value: 'rsh' },
+      variant: 'operator',
+      keys: ['>'],
+    },
+    {
+      id: 'clear-entry',
+      label: 'CE',
+      aria: 'Clear entry',
+      action: { type: 'clear-entry' },
+      variant: 'function',
+      keys: ['Delete'],
+    },
+    {
+      id: 'backspace',
+      label: '⌫',
+      aria: 'Backspace',
+      action: { type: 'backspace' },
+      variant: 'function',
+      keys: ['Backspace'],
+    },
+
+    hexDigit('B'),
+    {
+      id: 'paren-open',
+      label: '(',
+      aria: 'Open parenthesis',
+      action: { type: 'paren-open' },
+      variant: 'function',
+      keys: ['('],
+    },
+    {
+      id: 'paren-close',
+      label: ')',
+      aria: 'Close parenthesis',
+      action: { type: 'paren-close' },
+      variant: 'function',
+      keys: [')'],
+    },
+    {
+      id: 'percent',
+      label: '%',
+      aria: 'Percent',
+      action: { type: 'percent' },
+      variant: 'function',
+      keys: ['%'],
+    },
+    {
+      id: 'divide',
+      label: '÷',
+      aria: 'Divide',
+      action: { type: 'operator', value: 'divide' },
+      variant: 'operator',
+      keys: ['/', 'NumpadDivide'],
+    },
+
+    hexDigit('C'),
+    digit('7'),
+    digit('8'),
+    digit('9'),
+    {
+      id: 'multiply',
+      label: '×',
+      aria: 'Multiply',
+      action: { type: 'operator', value: 'multiply' },
+      variant: 'operator',
+      keys: ['*', 'NumpadMultiply'],
+    },
+
+    hexDigit('D'),
+    digit('4'),
+    digit('5'),
+    digit('6'),
+    {
+      id: 'subtract',
+      label: '−',
+      aria: 'Subtract',
+      action: { type: 'operator', value: 'subtract' },
+      variant: 'operator',
+      keys: ['-', 'NumpadSubtract'],
+    },
+
+    hexDigit('E'),
+    digit('1'),
+    digit('2'),
+    digit('3'),
+    {
+      id: 'add',
+      label: '+',
+      aria: 'Add',
+      action: { type: 'operator', value: 'add' },
+      variant: 'operator',
+      keys: ['+', 'NumpadAdd'],
+    },
+
+    hexDigit('F'),
+    {
+      id: 'negate',
+      label: '±',
+      aria: 'Positive negative',
+      action: { type: 'negate' },
+      variant: 'digit',
+      keys: ['F9'],
+    },
+    digit('0'),
+    {
+      id: 'decimal',
+      label: '.',
+      aria: 'Decimal separator',
+      action: { type: 'decimal' },
+      variant: 'digit',
+      keys: ['.', ',', 'NumpadDecimal'],
+    },
+    {
+      id: 'equals',
+      label: '=',
+      aria: 'Equals',
+      action: { type: 'equals' },
+      variant: 'equals',
+      keys: ['Enter', '=', 'NumpadEnter'],
+    },
+  ],
+};
+
 export const LAYOUTS = {
   standard: STANDARD_LAYOUT,
   scientific: SCIENTIFIC_LAYOUT,
+  programmer: PROGRAMMER_LAYOUT,
 };
 
-export const MODES = ['standard', 'scientific'];
+export const TOOLBAR_KEYS = {
+  standard: [],
+  scientific: SCIENTIFIC_TOOLBAR_KEYS,
+  programmer: PROGRAMMER_TOOLBAR_KEYS,
+};
 
 /** Resolve the effective face of a key for the current 2nd/HYP state. */
 export function resolveKey(key, state = {}) {
@@ -545,7 +795,10 @@ export function resolveKey(key, state = {}) {
 
 /**
  * Keyboard bindings that are not tied to a keypad key.
- * `code`/`key` are matched case-insensitively, modifiers must match exactly.
+ * `key` is matched case-insensitively for single characters, modifiers must
+ * match exactly, and `modes` limits a binding to certain keypads — that is how
+ * F3-F5 can mean angle units in scientific mode and bit widths or bases in
+ * programmer mode, the same overlap Windows has.
  */
 export const KEYBOARD_SHORTCUTS = [
   { key: 'm', ctrl: true, action: { type: 'memory-store' } },
@@ -557,11 +810,22 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'h', ctrl: true, action: { type: 'ui-toggle-history' } },
   { key: '1', alt: true, action: { type: 'mode', value: 'standard' } },
   { key: '2', alt: true, action: { type: 'mode', value: 'scientific' } },
-  { key: 'F3', action: { type: 'angle-unit', value: 'deg' } },
-  { key: 'F4', action: { type: 'angle-unit', value: 'rad' } },
-  { key: 'F5', action: { type: 'angle-unit', value: 'grad' } },
-  { key: 'v', action: { type: 'toggle-fe' } },
-  { key: 'i', action: { type: 'toggle-second' } },
+  { key: '3', alt: true, action: { type: 'mode', value: 'programmer' } },
+
+  { key: 'F3', modes: ['scientific'], action: { type: 'angle-unit', value: 'deg' } },
+  { key: 'F4', modes: ['scientific'], action: { type: 'angle-unit', value: 'rad' } },
+  { key: 'F5', modes: ['scientific'], action: { type: 'angle-unit', value: 'grad' } },
+  { key: 'v', modes: ['scientific'], action: { type: 'toggle-fe' } },
+  { key: 'i', modes: ['scientific'], action: { type: 'toggle-second' } },
+
+  { key: 'F5', modes: ['programmer'], action: { type: 'number-base', value: 'hex' } },
+  { key: 'F6', modes: ['programmer'], action: { type: 'number-base', value: 'dec' } },
+  { key: 'F7', modes: ['programmer'], action: { type: 'number-base', value: 'oct' } },
+  { key: 'F8', modes: ['programmer'], action: { type: 'number-base', value: 'bin' } },
+  { key: 'F2', modes: ['programmer'], action: { type: 'bit-width', value: 'byte' } },
+  { key: 'F3', modes: ['programmer'], action: { type: 'bit-width', value: 'word' } },
+  { key: 'F4', modes: ['programmer'], action: { type: 'bit-width', value: 'dword' } },
+  { key: 'F12', modes: ['programmer'], action: { type: 'bit-width', value: 'qword' } },
 ];
 
 /**
@@ -582,6 +846,7 @@ export function findActionForKeyboardEvent(event, mode = 'standard') {
     if (!matchesKey) continue;
     if (Boolean(shortcut.ctrl) !== ctrl) continue;
     if (Boolean(shortcut.alt) !== alt) continue;
+    if (shortcut.modes && !shortcut.modes.includes(mode)) continue;
     return { action: shortcut.action, keyId: null };
   }
 

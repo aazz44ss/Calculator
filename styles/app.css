@@ -272,7 +272,73 @@ body {
 }
 
 /* ------------------------------------------------------------------ *
- * Toolbar (DEG/HYP/F-E) and memory row
+ * Programmer mode: the four bases under the display
+ * ------------------------------------------------------------------ */
+
+.base-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.base-list[hidden] {
+  display: none;
+}
+
+.base-row {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-key);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  padding: 1px 6px;
+  cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.base-row:hover {
+  background: var(--key-fn-hover);
+}
+
+.base-row[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.base-label {
+  flex: 0 0 2.6rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.base-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-family: "Cascadia Mono", "SF Mono", ui-monospace, "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.base-row[aria-pressed="true"] .base-value {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ *
+ * Toolbar (DEG/HYP/F-E, bit width) and memory row
  * ------------------------------------------------------------------ */
 
 .toolbar,
@@ -405,6 +471,22 @@ body {
 .key[data-variant="toggle"][aria-pressed="true"] {
   background: var(--accent-soft);
   font-weight: 600;
+}
+
+.key:disabled {
+  color: var(--text-secondary);
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+.key:disabled:hover {
+  background: var(--key-digit-bg);
+}
+
+.key[data-variant="function"]:disabled:hover,
+.key[data-variant="operator"]:disabled:hover {
+  background: var(--key-fn-bg);
 }
 
 .key[data-variant="equals"] {

@@ -9,10 +9,11 @@ import { CalculatorEngine } from './engine.js';
 import {
   LAYOUTS,
   MEMORY_KEYS,
-  SCIENTIFIC_TOOLBAR_KEYS,
+  TOOLBAR_KEYS,
   findActionForKeyboardEvent,
   resolveKey,
 } from './layout.js';
+import { BIT_WIDTHS } from './programmer.js';
 
 const STORAGE_KEYS = {
   state: 'calculator:state',
@@ -54,6 +55,7 @@ const elements = {
   parenBadge: document.getElementById('paren-badge'),
   memoryBadge: document.getElementById('memory-badge'),
   toolbar: document.getElementById('toolbar'),
+  baseList: document.getElementById('base-list'),
   memoryRow: document.getElementById('memory-row'),
   keypad: document.getElementById('keypad'),
   themeButton: document.getElementById('theme-button'),
@@ -101,13 +103,15 @@ function currentLayout() {
   return LAYOUTS[engine.mode] ?? LAYOUTS.standard;
 }
 
+function currentToolbarKeys() {
+  return TOOLBAR_KEYS[engine.mode] ?? [];
+}
+
 function buildRegistry() {
   keyRegistry.clear();
   for (const key of currentLayout().keys) keyRegistry.set(key.id, key);
   for (const key of MEMORY_KEYS) keyRegistry.set(key.id, key);
-  if (engine.mode === 'scientific') {
-    for (const key of SCIENTIFIC_TOOLBAR_KEYS) keyRegistry.set(key.id, key);
-  }
+  for (const key of currentToolbarKeys()) keyRegistry.set(key.id, key);
 }
 
 function renderKeypad() {
@@ -140,18 +144,31 @@ function renderKeypad() {
     fragment.append(button);
   }
   elements.keypad.replaceChildren(fragment);
+  updateKeyAvailability();
+}
+
+/** Grey out keys the current mode and base do not accept, such as A-F in DEC. */
+function updateKeyAvailability() {
+  for (const button of elements.keypad.querySelectorAll('[data-key]')) {
+    const key = keyRegistry.get(button.dataset.key);
+    if (!key) continue;
+    button.disabled = !engine.isActionAvailable(resolveKey(key, engine).action);
+  }
 }
 
 function renderToolbar() {
-  if (engine.mode !== 'scientific') {
+  const keys = currentToolbarKeys();
+  if (keys.length === 0) {
     elements.toolbar.hidden = true;
     elements.toolbar.replaceChildren();
     return;
   }
+
   elements.toolbar.hidden = false;
-  if (elements.toolbar.childElementCount === 0) {
+  if (elements.toolbar.dataset.mode !== engine.mode) {
+    elements.toolbar.dataset.mode = engine.mode;
     const fragment = document.createDocumentFragment();
-    for (const key of SCIENTIFIC_TOOLBAR_KEYS) {
+    for (const key of keys) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'chip';
@@ -169,9 +186,53 @@ function renderToolbar() {
       button.title = `Angle unit: ${ANGLE_LABELS[engine.angleUnit]}`;
       continue;
     }
+    if (button.dataset.key === 'bit-width') {
+      const width = BIT_WIDTHS.find((item) => item.id === engine.bitWidth);
+      button.textContent = width.label;
+      button.title = `Bit width: ${width.label} (${width.bits} bits)`;
+      continue;
+    }
     const pressed = button.dataset.key === 'toggle-hyp' ? engine.hyp : engine.fe;
     button.setAttribute('aria-pressed', String(pressed));
   }
+}
+
+function renderBases(state) {
+  if (state.mode !== 'programmer') {
+    elements.baseList.hidden = true;
+    elements.baseList.replaceChildren();
+    return;
+  }
+
+  elements.baseList.hidden = false;
+  if (elements.baseList.childElementCount !== state.bases.length) {
+    const fragment = document.createDocumentFragment();
+    for (const base of state.bases) {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'base-row';
+      button.dataset.base = base.id;
+      button.setAttribute('aria-label', `Show ${base.label}`);
+      const label = document.createElement('span');
+      label.className = 'base-label';
+      const value = document.createElement('span');
+      value.className = 'base-value';
+      button.append(label, value);
+      item.append(button);
+      fragment.append(item);
+    }
+    elements.baseList.replaceChildren(fragment);
+  }
+
+  const buttons = elements.baseList.querySelectorAll('.base-row');
+  state.bases.forEach((base, index) => {
+    const button = buttons[index];
+    button.dataset.base = base.id;
+    button.setAttribute('aria-pressed', String(base.active));
+    button.firstChild.textContent = base.label;
+    button.lastChild.textContent = base.text;
+  });
 }
 
 function renderMemoryRow(state) {
@@ -330,7 +391,9 @@ function render() {
   buildRegistry();
   renderMode();
   renderKeypad();
+  updateKeyAvailability();
   renderToolbar();
+  renderBases(state);
   renderMemoryRow(state);
   renderDisplay(state);
   renderPanel(state);
@@ -365,6 +428,9 @@ function dispatch(action) {
       return;
     case 'ui-cycle-angle-unit':
       if (engine.mode === 'scientific') engine.cycleAngleUnit();
+      break;
+    case 'ui-cycle-bit-width':
+      if (engine.mode === 'programmer') engine.cycleBitWidth();
       break;
     default:
       engine.press(action);
@@ -442,6 +508,12 @@ document.addEventListener('click', (event) => {
   const panelElement = target.closest('[data-panel-action]');
   if (panelElement instanceof HTMLElement) {
     handlePanelAction(panelElement);
+    return;
+  }
+
+  const baseButton = target.closest('[data-base]');
+  if (baseButton instanceof HTMLElement) {
+    dispatch({ type: 'number-base', value: baseButton.dataset.base });
     return;
   }
 

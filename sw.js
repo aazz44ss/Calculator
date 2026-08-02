@@ -1,6 +1,6 @@
 /* Service worker: precache the whole shell so the app opens offline. */
 
-const CACHE_NAME = 'calculator-shell-v1';
+const CACHE_NAME = 'calculator-shell-v2';
 
 /** Everything needed to boot without the network. */
 const SHELL = [
@@ -13,6 +13,7 @@ const SHELL = [
   './src/engine.js',
   './src/format.js',
   './src/layout.js',
+  './src/programmer.js',
   './icons/favicon.svg',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',

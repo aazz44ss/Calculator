@@ -12,7 +12,7 @@
     "start": "node scripts/serve.js",
     "dev": "node scripts/serve.js",
     "icons": "node scripts/generate-icons.js",
-    "test": "node --test test/decimal.test.js test/engine.test.js",
+    "test": "node --test test/decimal.test.js test/engine.test.js test/programmer.test.js test/shell.test.js",
     "test:e2e": "node --test --test-concurrency=1 test/browser.test.js",
     "test:all": "npm test && npm run test:e2e"
   },
