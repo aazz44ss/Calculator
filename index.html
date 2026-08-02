@@ -42,11 +42,43 @@
               class="icon-button"
               id="mode-menu-button"
               aria-label="Switch calculator mode"
+              aria-haspopup="menu"
+              aria-controls="mode-menu"
               aria-expanded="false"
             >
               <span aria-hidden="true">☰</span>
             </button>
             <h1 class="titlebar-title" id="mode-title">Standard</h1>
+          </div>
+
+          <div class="mode-menu" id="mode-menu" role="menu" aria-label="Calculator mode" hidden>
+            <button
+              type="button"
+              role="menuitemradio"
+              class="mode-menu-item"
+              data-mode-button="standard"
+              aria-checked="true"
+            >
+              <span class="mode-menu-check" aria-hidden="true">✓</span>Standard
+            </button>
+            <button
+              type="button"
+              role="menuitemradio"
+              class="mode-menu-item"
+              data-mode-button="scientific"
+              aria-checked="false"
+            >
+              <span class="mode-menu-check" aria-hidden="true">✓</span>Scientific
+            </button>
+            <button
+              type="button"
+              role="menuitemradio"
+              class="mode-menu-item"
+              data-mode-button="programmer"
+              aria-checked="false"
+            >
+              <span class="mode-menu-check" aria-hidden="true">✓</span>Programmer
+            </button>
           </div>
           <div class="titlebar-group">
             <button type="button" class="icon-button" id="theme-button" aria-label="Theme: system">
@@ -64,35 +96,7 @@
           </div>
         </header>
 
-        <div class="mode-switch" id="mode-switch" role="tablist" aria-label="Calculator mode">
-          <button
-            type="button"
-            role="tab"
-            class="mode-tab"
-            data-mode-button="standard"
-            aria-selected="true"
-          >
-            Standard
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="mode-tab"
-            data-mode-button="scientific"
-            aria-selected="false"
-          >
-            Scientific
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="mode-tab"
-            data-mode-button="programmer"
-            aria-selected="false"
-          >
-            Programmer
-          </button>
-        </div>
+        <ol class="tape" id="tape" aria-label="Recent calculations"></ol>
 
         <section class="display" id="display-area" aria-label="Display">
           <div class="display-badges">

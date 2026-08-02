@@ -90,6 +90,14 @@ async function tapDigits(page, text) {
 const readDisplay = (page) => page.textContent('#display');
 const readExpression = (page) => page.textContent('#expression');
 
+/** Modes live behind the title bar menu, there is no tab strip. */
+async function switchMode(page, mode) {
+  await page.tap('#mode-menu-button');
+  await page.tap(`[data-mode-button="${mode}"]`);
+}
+
+const elements = (page, selector) => page.locator(selector).count();
+
 /** The panel fades its visibility, so give the transition a chance to finish. */
 async function waitForVisible(locator) {
   await locator.waitFor({ state: 'visible', timeout: 5_000 });
@@ -313,7 +321,7 @@ describe('webkit', () => {
 
   test('scientific mode swaps in the 5x8 keypad with brackets and 2nd', { timeout: TIMEOUT }, async () => {
     await withApp(browser, { width: 414, height: 896 }, async (page) => {
-      await page.tap('[data-mode-button="scientific"]');
+      await switchMode(page, 'scientific');
       const keypad = page.locator('#keypad');
       assert.equal(await keypad.getAttribute('data-columns'), '5');
       assert.equal(await keypad.getAttribute('data-rows'), '8');
@@ -361,7 +369,7 @@ describe('webkit', () => {
       assert.equal(await page.locator('#paren-badge').isVisible(), false);
 
       // The same keys come alive on the scientific keypad.
-      await page.tap('[data-mode-button="scientific"]');
+      await switchMode(page, 'scientific');
       await page.keyboard.type('5');
       await page.keyboard.press('s');
       assert.equal(await readExpression(page), 'sin(5)');
@@ -370,7 +378,7 @@ describe('webkit', () => {
 
   test('programmer mode shows every base and works on bits', { timeout: TIMEOUT }, async () => {
     await withApp(browser, { width: 414, height: 896 }, async (page) => {
-      await page.tap('[data-mode-button="programmer"]');
+      await switchMode(page, 'programmer');
       const keypad = page.locator('#keypad');
       assert.equal(await keypad.getAttribute('data-columns'), '5');
       assert.equal(await keypad.getAttribute('data-rows'), '8');
@@ -424,7 +432,7 @@ describe('webkit', () => {
 
   test('degree trigonometry lands exactly on the axes', { timeout: TIMEOUT }, async () => {
     await withApp(browser, { width: 414, height: 896 }, async (page) => {
-      await page.tap('[data-mode-button="scientific"]');
+      await switchMode(page, 'scientific');
 
       await tapDigits(page, '180');
       await tap(page, 'sin');
@@ -446,6 +454,60 @@ describe('webkit', () => {
       await tapDigits(page, '3');
       await tap(page, 'equals');
       assert.equal(await readDisplay(page), '5');
+    });
+  });
+
+  test('the title bar menu switches modes and the tape lists recent work', { timeout: TIMEOUT }, async () => {
+    await withApp(browser, { width: 390, height: 844 }, async (page) => {
+      // The old tab strip is gone; modes live behind the hamburger.
+      assert.equal(await page.locator('.mode-tab').count(), 0);
+      const menu = page.locator('#mode-menu');
+      assert.equal(await menu.isVisible(), false);
+
+      await page.tap('#mode-menu-button');
+      await waitForVisible(menu);
+      assert.equal(await elements(page, '#mode-menu [data-mode-button]'), 3);
+      assert.equal(
+        await page.locator('[data-mode-button="standard"]').getAttribute('aria-checked'),
+        'true',
+      );
+
+      await page.tap('[data-mode-button="programmer"]');
+      assert.equal(await menu.isVisible(), false, 'picking a mode closes the menu');
+      assert.equal(await page.locator('#mode-title').textContent(), 'Programmer');
+      assert.equal(await page.locator('#keypad').getAttribute('data-rows'), '8');
+
+      // Escape closes the menu instead of clearing the calculation.
+      await switchMode(page, 'standard');
+      await page.keyboard.type('42');
+      await page.tap('#mode-menu-button');
+      await waitForVisible(menu);
+      await page.keyboard.press('Escape');
+      assert.equal(await menu.isVisible(), false);
+      assert.equal(await readDisplay(page), '42');
+
+      // The tape keeps finished calculations in view, newest at the bottom.
+      await page.keyboard.press('Escape');
+      for (const sum of ['12*12', '0.1+0.2', '99-45']) {
+        await page.keyboard.type(sum);
+        await page.keyboard.press('Enter');
+      }
+      const entries = await page.locator('.tape-button').allTextContents();
+      assert.equal(entries.length, 3);
+      assert.match(entries[0], /99 − 45 =54/);
+      assert.match(entries[2], /12 × 12 =144/);
+
+      const tapeBox = await page.locator('#tape').boundingBox();
+      const displayBox = await page.locator('#display-area').boundingBox();
+      const keypadBox = await page.locator('#keypad').boundingBox();
+      assert.ok(tapeBox.y + tapeBox.height <= displayBox.y + 1, 'the tape sits above the display');
+      assert.ok(displayBox.y + displayBox.height <= keypadBox.y + 1);
+      assert.ok(tapeBox.height > 60, `the tape should have room, got ${tapeBox.height}px`);
+
+      // Tapping an entry brings its result back.
+      await page.tap('.tape-button >> nth=2');
+      assert.equal(await readDisplay(page), '144');
+      assert.equal(await readExpression(page), '12 × 12 =');
     });
   });
 
@@ -494,7 +556,7 @@ describe('webkit', () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
     try {
       await withApp(browser, { context }, async (page) => {
-        await page.tap('[data-mode-button="scientific"]');
+        await switchMode(page, 'scientific');
         await page.tap('#theme-button'); // system -> light
         await page.tap('#theme-button'); // light -> dark
         await page.keyboard.type('11*11');

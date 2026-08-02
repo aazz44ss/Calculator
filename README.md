@@ -14,6 +14,10 @@ working offline.
   rotations.
 - **Exact decimals** — `0.1 + 0.2` shows `0.3` and `0.07 × 100` is `7`, because
   arithmetic runs on a BigInt fixed-point decimal rather than on doubles.
+- **Modes from the title bar menu** — the hamburger lists the three keypads,
+  there is no tab strip taking up a row.
+- **A tape of recent calculations** above the display, newest closest to it, so
+  the last few results stay in view; tap one to bring it back.
 - **History and memory** — a bottom drawer on phones, a side rail from 720px up.
 - **Themes** — light, dark or follow the system, persisted with the mode,
   history and memory in `localStorage`.
@@ -156,7 +160,7 @@ RAD in scientific mode and WORD in programmer mode.
 
 ```bash
 npm test          # 88 unit tests: decimals, formatting, state machine, bases
-npm run test:e2e  # 20 WebKit end-to-end tests + 1 Chromium offline test
+npm run test:e2e  # 21 WebKit end-to-end tests + 1 Chromium offline test
 ```
 
 The end-to-end suite drives the real dev server through Playwright and covers
@@ -178,9 +182,10 @@ These are all covered by tests, so they stay fixed:
 1. The iOS install hint sits in the normal layout flow. As an absolutely
    positioned banner it covered the equals key and swallowed taps.
 2. The keypad height is derived from its width with `aspect-ratio`
-   (key height ≈ key width × 0.95) plus `max-height: 100%`; spare vertical
-   space goes to the display. Otherwise keys stretch into tall strips on
-   phones with a lot of vertical room.
+   (key height ≈ key width × 0.95) plus `max-height: 100%`, and the tape above
+   it uses `flex-basis: 0` so it can only take space the keypad does not want.
+   Otherwise keys stretch into tall strips on phones with a lot of vertical
+   room, or a long history squeezes them flat.
 3. `<link rel="apple-touch-icon">` in the HTML wins over the manifest icons in
    Safari, so that file has to exist at 180×180.
 4. Degree and gradian angles are reduced against a quarter turn with exact

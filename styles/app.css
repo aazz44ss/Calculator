@@ -129,6 +129,7 @@ body {
  * ------------------------------------------------------------------ */
 
 .titlebar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -178,41 +179,129 @@ body {
   background: var(--key-fn-active);
 }
 
-.mode-switch {
+/* Mode picker hanging off the title bar hamburger. */
+.mode-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 4;
+  min-width: 11rem;
   display: flex;
-  gap: 4px;
-  flex: 0 0 auto;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
-.mode-tab {
+.mode-menu[hidden] {
+  display: none;
+}
+
+.mode-menu-item {
   appearance: none;
-  border: 1px solid var(--key-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
   border-radius: var(--radius-key);
-  background: var(--key-fn-bg);
-  color: var(--text-secondary);
+  background: transparent;
+  color: var(--text);
   font: inherit;
-  font-size: 0.78rem;
-  padding: 5px 12px;
+  font-size: 0.86rem;
+  text-align: left;
+  padding: 8px 10px;
   cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
   touch-action: manipulation;
 }
 
-.mode-tab[aria-selected="true"] {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--text);
+.mode-menu-item:hover {
+  background: var(--key-fn-hover);
+}
+
+.mode-menu-item[aria-checked="true"] {
   font-weight: 600;
 }
 
+.mode-menu-check {
+  width: 1em;
+  color: var(--accent);
+  visibility: hidden;
+}
+
+.mode-menu-item[aria-checked="true"] .mode-menu-check {
+  visibility: visible;
+}
+
 /* ------------------------------------------------------------------ *
- * Display: takes whatever vertical space the keypad does not need
+ * Tape: the recent calculations, newest closest to the display
+ * ------------------------------------------------------------------ */
+
+.tape {
+  /* Basis 0 so the tape only ever uses space the keypad does not want. */
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 2px;
+  list-style: none;
+  display: flex;
+  /* Reversed so the newest entry sits at the bottom and stays in view. */
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  gap: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Older entries fade out as they scroll past the top edge. */
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+
+.tape-item {
+  flex: 0 0 auto;
+}
+
+.tape-button {
+  appearance: none;
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-key);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  touch-action: manipulation;
+}
+
+.tape-button:hover {
+  background: var(--key-fn-hover);
+  color: var(--text);
+}
+
+.tape-result {
+  color: var(--text);
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Display
  * ------------------------------------------------------------------ */
 
 .display {
-  flex: 1 1 auto;
-  /* Tall enough for the badge row, the expression and the largest value. */
-  min-height: 6.25rem;
+  flex: 0 0 auto;
+  /* Tall enough for the expression and the largest value; the badge row above
+     it collapses when there is nothing to show, leaving that space to the tape. */
+  min-height: 5.5rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -256,7 +345,6 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
-  min-height: 1.15rem;
   align-self: flex-start;
   order: -1;
 }

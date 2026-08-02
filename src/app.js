@@ -48,7 +48,8 @@ const elements = {
   calculator: document.getElementById('calculator'),
   modeTitle: document.getElementById('mode-title'),
   modeMenuButton: document.getElementById('mode-menu-button'),
-  modeSwitch: document.getElementById('mode-switch'),
+  modeMenu: document.getElementById('mode-menu'),
+  tape: document.getElementById('tape'),
   displayArea: document.getElementById('display-area'),
   expression: document.getElementById('expression'),
   display: document.getElementById('display'),
@@ -89,8 +90,10 @@ const ui = {
   theme: THEMES.includes(storage.get(STORAGE_KEYS.theme)) ? storage.get(STORAGE_KEYS.theme) : 'system',
   panelTab: storage.get(STORAGE_KEYS.panel) === 'memory' ? 'memory' : 'history',
   panelOpen: false,
+  modeMenuOpen: false,
   keypadSignature: '',
   panelSignature: '',
+  tapeSignature: '',
 };
 
 const keyRegistry = new Map();
@@ -369,9 +372,41 @@ function renderMode() {
   const layout = currentLayout();
   elements.root.dataset.mode = layout.id;
   elements.modeTitle.textContent = layout.name;
-  for (const tab of elements.modeSwitch.querySelectorAll('[data-mode-button]')) {
-    tab.setAttribute('aria-selected', String(tab.dataset.modeButton === layout.id));
+  for (const item of elements.modeMenu.querySelectorAll('[data-mode-button]')) {
+    item.setAttribute('aria-checked', String(item.dataset.modeButton === layout.id));
   }
+}
+
+function setModeMenuOpen(open) {
+  ui.modeMenuOpen = open;
+  elements.modeMenu.hidden = !open;
+  elements.modeMenuButton.setAttribute('aria-expanded', String(open));
+}
+
+/** The at-a-glance list of finished calculations above the display. */
+function renderTape(state) {
+  const signature = state.history.map((entry) => entry.id).join('|');
+  if (signature === ui.tapeSignature) return;
+  ui.tapeSignature = signature;
+
+  const items = state.history.map((entry) => {
+    const item = document.createElement('li');
+    item.className = 'tape-item';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tape-button';
+    button.dataset.panelAction = 'history-recall';
+    button.dataset.id = entry.id;
+    button.setAttribute('aria-label', `${entry.expression} ${entry.result}`);
+    button.append(document.createTextNode(entry.expression));
+    const result = document.createElement('span');
+    result.className = 'tape-result';
+    result.textContent = entry.result;
+    button.append(result);
+    item.append(button);
+    return item;
+  });
+  elements.tape.replaceChildren(...items);
 }
 
 function renderTheme() {
@@ -395,6 +430,7 @@ function render() {
   renderToolbar();
   renderBases(state);
   renderMemoryRow(state);
+  renderTape(state);
   renderDisplay(state);
   renderPanel(state);
   renderPanelVisibility();
@@ -499,6 +535,10 @@ document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
 
+  if (ui.modeMenuOpen && !target.closest('#mode-menu') && !target.closest('#mode-menu-button')) {
+    setModeMenuOpen(false);
+  }
+
   const keyElement = target.closest('[data-key]');
   if (keyElement instanceof HTMLElement) {
     handleKeyElement(keyElement);
@@ -519,6 +559,7 @@ document.addEventListener('click', (event) => {
 
   const modeButton = target.closest('[data-mode-button]');
   if (modeButton instanceof HTMLElement) {
+    setModeMenuOpen(false);
     dispatch({ type: 'mode', value: modeButton.dataset.modeButton });
     return;
   }
@@ -549,9 +590,7 @@ elements.panelClear.addEventListener('click', () => {
 });
 
 elements.modeMenuButton.addEventListener('click', () => {
-  const collapsed = elements.modeSwitch.hidden;
-  elements.modeSwitch.hidden = !collapsed;
-  elements.modeMenuButton.setAttribute('aria-expanded', String(collapsed));
+  setModeMenuOpen(!ui.modeMenuOpen);
 });
 
 elements.installHintDismiss.addEventListener('click', () => {
@@ -562,6 +601,16 @@ elements.installHintDismiss.addEventListener('click', () => {
 window.addEventListener('keydown', (event) => {
   const target = event.target;
   if (target instanceof HTMLElement && target.isContentEditable) return;
+
+  if (event.key === 'Escape' && ui.modeMenuOpen) {
+    event.preventDefault();
+    const insideMenu = elements.modeMenu.contains(document.activeElement);
+    setModeMenuOpen(false);
+    // Only pull focus back for someone who tabbed into the menu; doing it
+    // after a tap would leave the hamburger focused and swallow the next Enter.
+    if (insideMenu) elements.modeMenuButton.focus();
+    return;
+  }
 
   // Let a focused control handle its own activation keys.
   const active = document.activeElement;
