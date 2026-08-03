@@ -28,12 +28,34 @@ test('every source module is precached by the service worker', async () => {
 
 test('every asset the page links to is precached', async () => {
   const html = await readFile(join(root, 'index.html'), 'utf8');
-  const referenced = [...html.matchAll(/(?:href|src)="([^"#:]+)"/g)]
+  const referenced = [...html.matchAll(/<[^>]*(?:href|src)="([^"#:]+)"[^>]*>/g)]
+    // Launch screens are fetched by iOS itself, outside the service worker, so
+    // they are deliberately not part of the offline shell.
+    .filter((match) => !match[0].includes('apple-touch-startup-image'))
     .map((match) => match[1])
     .filter((value) => !value.startsWith('http'));
   const cached = await precachedPaths();
   const missing = referenced.filter((path) => !cached.includes(path));
   assert.deepEqual(missing, [], `add these to SHELL in sw.js: ${missing.join(', ')}`);
+});
+
+test('every launch screen matches the device it claims', async () => {
+  const html = await readFile(join(root, 'index.html'), 'utf8');
+  const links = [...html.matchAll(/<link rel="apple-touch-startup-image"[^>]*>/g)].map((m) => m[0]);
+  assert.ok(links.length >= 10, `only ${links.length} launch screens`);
+
+  for (const link of links) {
+    const media = /media="([^"]+)"/.exec(link)[1];
+    const href = /href="([^"]+)"/.exec(link)[1];
+    const width = Number(/device-width:\s*(\d+)px/.exec(media)[1]);
+    const height = Number(/device-height:\s*(\d+)px/.exec(media)[1]);
+    const ratio = Number(/-webkit-device-pixel-ratio:\s*(\d+)/.exec(media)[1]);
+
+    const png = await readFile(join(root, href));
+    assert.equal(png.readUInt32BE(16), width * ratio, `${href} has the wrong width`);
+    assert.equal(png.readUInt32BE(20), height * ratio, `${href} has the wrong height`);
+    assert.match(media, /prefers-color-scheme: (light|dark)/);
+  }
 });
 
 test('the precache list has no stale entries', async () => {

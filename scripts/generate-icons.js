@@ -90,6 +90,70 @@ function socialCard() {
 `;
 }
 
+/**
+ * iOS shows a blank screen while a home screen web app boots unless it finds a
+ * startup image whose media query matches the device exactly. These are the
+ * iPhone sizes worth covering, as CSS pixels and device pixel ratio.
+ */
+const IPHONE_SCREENS = [
+  { width: 375, height: 667, ratio: 2 }, // SE 2nd/3rd, 6/7/8
+  { width: 375, height: 812, ratio: 3 }, // X, XS, 11 Pro, 12/13 mini
+  { width: 414, height: 896, ratio: 2 }, // XR, 11
+  { width: 414, height: 896, ratio: 3 }, // XS Max, 11 Pro Max
+  { width: 390, height: 844, ratio: 3 }, // 12, 13, 14
+  { width: 393, height: 852, ratio: 3 }, // 14 Pro, 15, 15 Pro, 16
+  { width: 428, height: 926, ratio: 3 }, // 12/13 Pro Max, 14 Plus
+  { width: 430, height: 932, ratio: 3 }, // 14 Pro Max, 15 Plus, 16 Plus
+  { width: 402, height: 874, ratio: 3 }, // 16 Pro
+  { width: 440, height: 956, ratio: 3 }, // 16 Pro Max
+];
+
+const SPLASH_THEMES = [
+  { id: 'light', background: '#f3f3f3', scheme: 'light' },
+  { id: 'dark', background: '#202020', scheme: 'dark' },
+];
+
+/** Launch screen: the app background with the icon where it sits in the app. */
+function splash(width, height, background) {
+  const size = Math.round(Math.min(width, height) * 0.3);
+  const x = Math.round((width - size) / 2);
+  const y = Math.round(height / 2 - size * 0.85);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect width="${width}" height="${height}" fill="${background}"/>
+  <g transform="translate(${x} ${y}) scale(${(size / 512).toFixed(4)})">
+    <rect width="512" height="512" rx="96" fill="${FLAT_BACKGROUND}"/>
+    ${glyph()}
+  </g>
+</svg>
+`;
+}
+
+async function writeSplashScreens(sharp) {
+  const dir = join(iconsDir, 'splash');
+  await mkdir(dir, { recursive: true });
+  const links = [];
+
+  for (const screen of IPHONE_SCREENS) {
+    for (const theme of SPLASH_THEMES) {
+      const width = screen.width * screen.ratio;
+      const height = screen.height * screen.ratio;
+      const file = `splash/${width}x${height}-${theme.id}.png`;
+      await sharp(Buffer.from(splash(width, height, theme.background)))
+        .png({ compressionLevel: 9, palette: true })
+        .toFile(join(iconsDir, file));
+      links.push(
+        `<link rel="apple-touch-startup-image" media="(prefers-color-scheme: ${theme.scheme}) and ` +
+          `(device-width: ${screen.width}px) and (device-height: ${screen.height}px) and ` +
+          `(-webkit-device-pixel-ratio: ${screen.ratio}) and (orientation: portrait)" ` +
+          `href="icons/${file}" />`,
+      );
+    }
+  }
+
+  console.log(`wrote ${links.length} launch screens to ${dir}`);
+  return links;
+}
+
 const TARGETS = [
   { file: 'icon-192.png', size: 192, svg: artwork(), flattenTo: null },
   { file: 'icon-512.png', size: 512, svg: artwork(), flattenTo: null },
@@ -134,6 +198,9 @@ async function main() {
     await pipeline.png({ compressionLevel: 9 }).toFile(output);
     console.log(`wrote ${output} (${target.size}×${target.size})`);
   }
+
+  const links = await writeSplashScreens(sharp);
+  if (process.argv.includes('--print-links')) console.log(`\n${links.join('\n')}`);
 }
 
 main().catch((error) => {

@@ -82,6 +82,13 @@ full screen, and the service worker keeps the whole shell cached for offline
 use. `icons/apple-touch-icon.png` (180×180) is linked from the HTML because
 Safari prefers that link over the icons in the web manifest.
 
+Launch feels native because of two things. `icons/splash/` holds a launch screen
+for every current iPhone size in both light and dark, linked with the exact
+media queries iOS insists on; without a match it shows a blank white screen for
+the second or so the web app runtime needs to boot. And the six ES modules are
+listed as `modulepreload`, which turns a three-deep import waterfall into one
+parallel batch and roughly halves the time from HTML to a rendered keypad.
+
 ## Layout of the project
 
 ```
@@ -96,7 +103,7 @@ src/engine.js             pure calculator state machine, never touches the DOM
 src/layout.js             keypads and keyboard bindings as data
 src/app.js                the only module that talks to the DOM
 scripts/serve.js          zero-dependency dev server (LAN URL + QR code)
-scripts/generate-icons.js draws the icon and rasterises the PNG variants
+scripts/generate-icons.js draws the icon, the social card and the iOS launch screens
 test/decimal.test.js      decimal arithmetic and formatting
 test/engine.test.js       state machine behaviour
 test/programmer.test.js   bit widths, bases and the programmer keypad
