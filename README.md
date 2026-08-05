@@ -130,6 +130,15 @@ division by 100). After `=` the expression line keeps showing `12 × 12 =` until
 a new calculation starts, which is what the engine's `settledExpression` field
 is for.
 
+The result does not wait for `=`. As soon as a second operand exists the big
+display shows what `=` would produce and the expression line carries the digits
+being typed, so `12 × 12` reads `144` before you commit it and pressing `=` only
+settles the expression line. `foldToResult()` works that answer out — brackets
+folded from the inside out — without touching any state, and `equals()` uses the
+same function, so the preview can never disagree with the real result. An
+expression that cannot be computed yet, such as `5 ÷ 0`, previews nothing rather
+than flashing an error.
+
 `src/programmer.js` does the same job for programmer mode, on plain BigInts
 read as signed 64 bit two's complement numbers. That is why `NOT 0` is `-1` in
 DEC and `FFFF FFFF FFFF FFFF` in HEX at the same time, and why division

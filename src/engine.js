@@ -301,6 +301,8 @@ export class CalculatorEngine {
 
   displayText() {
     if (this.error) return this.error;
+    const preview = this.previewValue();
+    if (preview !== null) return this.format(preview);
     if (this.isProgrammer) return this.format(this.currentValue());
     if (this.entry !== null) return formatEntry(this.entry);
     return formatValue(this.value, { fe: this.fe });
@@ -311,7 +313,11 @@ export class CalculatorEngine {
     const parts = [];
     for (const frame of this.parenStack) parts.push(...frame.tokens, '(');
     parts.push(...this.tokens);
-    if (this.operandExpression !== null) parts.push(this.operandExpression);
+    // While a chain is running the big display shows the live result, so the
+    // number being typed belongs here instead.
+    if (this.operandExpression !== null || (parts.length > 0 && this.entry !== null)) {
+      parts.push(this.currentOperandToken());
+    }
     return formatExpression(parts);
   }
 
@@ -701,6 +707,8 @@ export class CalculatorEngine {
       } else {
         this.settledExpression = null;
         this.accumulator = value;
+        // Keep the first operand on screen; it used to blank to zero here.
+        this.value = value;
         this.tokens = [token, symbol];
       }
 
@@ -746,27 +754,67 @@ export class CalculatorEngine {
     });
   }
 
+  /**
+   * What pressing "=" would produce, worked out without touching any state:
+   * brackets folded from the inside out, then the pending operator, or else a
+   * repeat of the previous operation.
+   */
+  foldToResult() {
+    let accumulator = this.accumulator;
+    let operator = this.pendingOperator;
+    let tokens = [...this.tokens];
+    let value = this.currentValue();
+    let token = this.currentOperandToken();
+
+    for (let index = this.parenStack.length - 1; index >= 0; index -= 1) {
+      const inner = [...tokens, token];
+      if (operator) value = this.guardResult(this.compute(accumulator, operator, value));
+      token = `(${formatExpression(inner)})`;
+      const frame = this.parenStack[index];
+      accumulator = frame.accumulator;
+      operator = frame.pendingOperator;
+      tokens = [...frame.tokens];
+    }
+
+    if (operator) {
+      return {
+        result: this.guardResult(this.compute(accumulator, operator, value)),
+        parts: [...tokens, token, '='],
+        operation: { operator, operand: value },
+      };
+    }
+    if (this.lastOperation) {
+      const { operator: repeated, operand } = this.lastOperation;
+      return {
+        result: this.guardResult(this.compute(value, repeated, operand)),
+        parts: [token, OPERATOR_SYMBOLS[repeated], this.format(operand), '='],
+        operation: this.lastOperation,
+      };
+    }
+    return { result: value, parts: [token, '='], operation: null };
+  }
+
+  /**
+   * The running result shown while typing. Null when there is nothing to
+   * preview yet, so the display falls back to the digits being entered.
+   */
+  previewValue() {
+    if (this.error || this.settledExpression !== null || !this.hasFreshOperand) return null;
+    const pending =
+      this.pendingOperator !== null || this.parenStack.some((frame) => frame.pendingOperator);
+    if (!pending) return null;
+    try {
+      return this.foldToResult().result;
+    } catch (error) {
+      // A half typed expression may not compute yet; keep quiet until "=".
+      if (error instanceof DecimalError) return null;
+      throw error;
+    }
+  }
+
   equals() {
     this.runGuarded(() => {
-      while (this.parenStack.length > 0) this.closeParenInternal();
-
-      const value = this.currentValue();
-      const token = this.currentOperandToken();
-      let result;
-      let parts;
-
-      if (this.pendingOperator) {
-        result = this.guardResult(this.compute(this.accumulator, this.pendingOperator, value));
-        this.lastOperation = { operator: this.pendingOperator, operand: value };
-        parts = [...this.tokens, token, '='];
-      } else if (this.lastOperation) {
-        const { operator, operand } = this.lastOperation;
-        result = this.guardResult(this.compute(value, operator, operand));
-        parts = [token, OPERATOR_SYMBOLS[operator], this.format(operand), '='];
-      } else {
-        result = value;
-        parts = [token, '='];
-      }
+      const { result, parts, operation } = this.foldToResult();
 
       this.value = result;
       this.entry = null;
@@ -775,6 +823,8 @@ export class CalculatorEngine {
       this.pendingOperator = null;
       this.hasFreshOperand = false;
       this.tokens = [];
+      this.parenStack = [];
+      if (operation) this.lastOperation = operation;
       this.settledExpression = formatExpression(parts);
       this.pushHistory(this.settledExpression, result);
     });

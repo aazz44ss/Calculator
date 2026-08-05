@@ -238,14 +238,18 @@ describe('webkit', () => {
     });
   });
 
-  test('touch input adds up', { timeout: TIMEOUT }, async () => {
+  test('touch input adds up, with the result shown before equals', { timeout: TIMEOUT }, async () => {
     await withApp(browser, {}, async (page) => {
       await tapDigits(page, '7');
       await tap(page, 'multiply');
+      assert.equal(await readDisplay(page), '7', 'the first operand stays on screen');
+
       await tapDigits(page, '8');
-      assert.equal(await readExpression(page), '7 ×');
+      assert.equal(await readExpression(page), '7 × 8');
+      assert.equal(await readDisplay(page), '56', 'the result appears before equals');
+
       await tap(page, 'equals');
-      assert.equal(await readDisplay(page), '56');
+      assert.equal(await readDisplay(page), '56', 'equals leaves the number alone');
       assert.equal(await readExpression(page), '7 × 8 =');
     });
   });

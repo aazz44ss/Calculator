@@ -62,6 +62,63 @@ test('keypad arithmetic is exact where doubles are not', () => {
   assert.equal(run([...digits('0.3'), operator('subtract'), ...digits('0.1'), EQUALS]).displayText(), '0.2');
 });
 
+test('the running result shows up before equals is pressed', () => {
+  const engine = new CalculatorEngine();
+
+  // A number on its own is just itself, digits and all.
+  press(engine, ...digits('12'));
+  assert.equal(engine.displayText(), '12');
+  assert.equal(engine.expressionText(), '');
+
+  // An operator alone leaves the first operand on screen.
+  press(engine, operator('multiply'));
+  assert.equal(engine.displayText(), '12');
+  assert.equal(engine.expressionText(), '12 ×');
+
+  // From the first digit of the second operand the display previews the result
+  // while the expression keeps showing what was typed.
+  press(engine, digit('1'));
+  assert.equal(engine.displayText(), '12');
+  assert.equal(engine.expressionText(), '12 × 1');
+  press(engine, digit('2'));
+  assert.equal(engine.displayText(), '144');
+  assert.equal(engine.expressionText(), '12 × 12');
+
+  // Equals therefore changes nothing but the expression line.
+  press(engine, EQUALS);
+  assert.equal(engine.displayText(), '144');
+  assert.equal(engine.expressionText(), '12 × 12 =');
+
+  // Backspacing re-previews, and chains preview the running total.
+  const chained = run([...digits('2'), operator('add'), ...digits('3'), operator('multiply'), ...digits('45')]);
+  assert.equal(chained.displayText(), '225');
+  press(chained, { type: 'backspace' });
+  assert.equal(chained.displayText(), '20');
+  assert.equal(chained.expressionText(), '2 + 3 × 4');
+
+  // Exactness holds in the preview too.
+  assert.equal(run([...digits('0.1'), operator('add'), ...digits('0.2')]).displayText(), '0.3');
+  assert.equal(run([...digits('0.07'), operator('multiply'), ...digits('100')]).displayText(), '7');
+});
+
+test('a preview that cannot be computed stays quiet until equals', () => {
+  const dividing = run([...digits('5'), operator('divide'), ...digits('0')]);
+  assert.equal(dividing.displayText(), '0', 'no error while the operand is still being typed');
+  assert.equal(dividing.expressionText(), '5 ÷ 0');
+  assert.equal(dividing.getState().isError, false);
+
+  press(dividing, EQUALS);
+  assert.equal(dividing.displayText(), 'Cannot divide by zero');
+  assert.equal(dividing.getState().isError, true);
+
+  // Repeating the previous operation is not previewed either: typing after
+  // equals shows the digits, not what a second equals would give.
+  const repeat = run([...digits('2'), operator('add'), ...digits('3'), EQUALS, ...digits('10')]);
+  assert.equal(repeat.displayText(), '10');
+  press(repeat, EQUALS);
+  assert.equal(repeat.displayText(), '13');
+});
+
 test('the settled expression keeps showing the finished calculation', () => {
   const engine = run([...digits('12'), operator('multiply'), ...digits('12'), EQUALS]);
   assert.equal(engine.displayText(), '144');
@@ -93,9 +150,10 @@ test('percent takes a share of the first operand for plus and minus', () => {
   assert.equal(run([...digits('50'), operator('add'), ...digits('10'), PERCENT, EQUALS]).displayText(), '55');
   assert.equal(run([...digits('200'), operator('subtract'), ...digits('10'), PERCENT, EQUALS]).displayText(), '180');
 
+  // The share lands in the expression, the display previews the total.
   const engine = run([...digits('50'), operator('add'), ...digits('10'), PERCENT]);
-  assert.equal(engine.displayText(), '5');
   assert.equal(engine.expressionText(), '50 + 5');
+  assert.equal(engine.displayText(), '55');
 });
 
 test('percent is a plain division by 100 for times and divide', () => {
@@ -168,11 +226,11 @@ test('brackets stack, report their depth and close themselves on equals', () => 
     ...digits('4'),
   ]);
   assert.equal(engine.parenDepth, 1);
-  assert.equal(engine.expressionText(), '2 × ( 3 +');
+  assert.equal(engine.expressionText(), '2 × ( 3 + 4');
 
   press(engine, { type: 'paren-close' });
-  assert.equal(engine.displayText(), '7');
   assert.equal(engine.expressionText(), '2 × (3 + 4)');
+  assert.equal(engine.displayText(), '14', 'the preview folds the brackets');
 
   press(engine, EQUALS);
   assert.equal(engine.displayText(), '14');
